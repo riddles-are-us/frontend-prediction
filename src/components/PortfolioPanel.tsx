@@ -1,37 +1,46 @@
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
-import { Wallet, TrendingUp, TrendingDown, Award, DollarSign } from 'lucide-react';
+import { Award, DollarSign, Minus, Plus, TrendingUp, Wallet } from 'lucide-react';
+import React, { useState } from 'react';
+import { useToast } from '../hooks/use-toast';
 import { MarketData, PlayerData } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
-import { useToast } from '@/hooks/use-toast';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Progress } from './ui/progress';
+import { Separator } from './ui/separator';
 
 interface PortfolioPanelProps {
   market: MarketData;
   playerData: PlayerData;
   onClaim: () => void;
   onWithdraw: (amount: number) => void;
+  onDeposit: (amount: number) => void;
 }
 
 const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ 
   market, 
   playerData, 
   onClaim, 
-  onWithdraw 
+  onWithdraw,
+  onDeposit 
 }) => {
   const { toast } = useToast();
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   
   const balance = Number(playerData.data.balance);
   const yesShares = Number(playerData.data.yes_shares);
   const noShares = Number(playerData.data.no_shares);
   const claimed = playerData.data.claimed;
 
-  const yesLiquidity = BigInt(market.yes_liquidity);
-  const noLiquidity = BigInt(market.no_liquidity);
+  // Provide default values to handle undefined market data
+  const yesLiquidity = BigInt(market.yes_liquidity || 0);
+  const noLiquidity = BigInt(market.no_liquidity || 0);
   const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
 
   // Calculate current position value
@@ -105,26 +114,68 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
     }
   };
 
-  const handleWithdrawAll = async () => {
-    if (balance === 0) {
+  const handleWithdraw = async () => {
+    const amount = parseFloat(withdrawAmount);
+    
+    if (!withdrawAmount || amount <= 0) {
       toast({
-        title: "No Balance",
-        description: "You don't have any balance to withdraw",
+        title: "Invalid Amount",
+        description: "Please enter a valid amount to withdraw",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (amount > balance) {
+      toast({
+        title: "Insufficient Balance",
+        description: "You don't have enough balance to withdraw this amount",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      await onWithdraw(balance);
+      await onWithdraw(amount);
+      setWithdrawAmount('');
+      setWithdrawDialogOpen(false);
       toast({
         title: "Withdrawal Initiated",
-        description: `Withdrawing ${balance} tokens`,
+        description: `Withdrawing ${amount} tokens`,
       });
     } catch (error) {
       toast({
         title: "Withdrawal Failed",
         description: "Failed to initiate withdrawal. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeposit = async () => {
+    const amount = parseFloat(depositAmount);
+    
+    if (!depositAmount || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount to deposit",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await onDeposit(amount);
+      setDepositAmount('');
+      setDepositDialogOpen(false);
+      toast({
+        title: "Deposit Initiated",
+        description: `Depositing ${amount} tokens`,
+      });
+    } catch (error) {
+      toast({
+        title: "Deposit Failed",
+        description: "Failed to initiate deposit. Please try again.",
         variant: "destructive"
       });
     }
@@ -242,25 +293,165 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
           </>
         )}
 
-        {/* Withdrawal */}
-        {balance > 0 && (
-          <>
-            <Separator />
-            <div className="space-y-3">
-              <h3 className="font-semibold flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Withdraw Funds
-              </h3>
-              <Button
-                onClick={handleWithdrawAll}
-                variant="outline"
-                className="w-full"
-              >
-                Withdraw All ({balance.toLocaleString()} tokens)
-              </Button>
+        {/* Fund Management */}
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Fund Management
+            </h3>
+            
+            <div className="flex gap-3">
+              {/* Deposit Dialog */}
+              <Dialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="flex-1 price-gradient-yes hover:opacity-90">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Deposit
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Plus className="h-5 w-5" />
+                      Deposit Funds
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="depositAmount">Amount to Deposit</Label>
+                      <Input
+                        id="depositAmount"
+                        type="number"
+                        placeholder="Enter amount"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        className="text-lg"
+                      />
+                      <div className="text-sm text-muted-foreground">
+                        Add funds to your trading balance
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setDepositAmount('');
+                          setDepositDialogOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleDeposit}
+                        disabled={!depositAmount || parseFloat(depositAmount) <= 0}
+                        className="flex-1 price-gradient-yes hover:opacity-90"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Deposit {depositAmount ? `${depositAmount}` : 'Funds'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Withdraw Dialog */}
+              <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    disabled={balance <= 0}
+                  >
+                    <Minus className="h-4 w-4 mr-2" />
+                    Withdraw
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Minus className="h-5 w-5" />
+                      Withdraw Funds
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="withdrawAmount">Amount to Withdraw</Label>
+                      <Input
+                        id="withdrawAmount"
+                        type="number"
+                        placeholder="Enter amount"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        className="text-lg"
+                        max={balance}
+                      />
+                      <div className="text-sm text-muted-foreground">
+                        Available balance: {balance.toLocaleString()} tokens
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setWithdrawAmount((balance * 0.25).toString())}
+                      >
+                        25%
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setWithdrawAmount((balance * 0.5).toString())}
+                      >
+                        50%
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setWithdrawAmount((balance * 0.75).toString())}
+                      >
+                        75%
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setWithdrawAmount(balance.toString())}
+                      >
+                        Max
+                      </Button>
+                    </div>
+
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setWithdrawAmount('');
+                          setWithdrawDialogOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleWithdraw}
+                        disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > balance}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <Minus className="h-4 w-4 mr-2" />
+                        Withdraw {withdrawAmount ? `${withdrawAmount}` : 'Funds'}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
-          </>
-        )}
+          </div>
+        </>
       </CardContent>
     </Card>
   );

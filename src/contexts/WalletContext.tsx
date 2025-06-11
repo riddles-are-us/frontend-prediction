@@ -40,8 +40,16 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   // Load saved player ID from localStorage
   useEffect(() => {
     const savedPlayerId = localStorage.getItem('player_id');
+    console.log("Loading saved player ID from localStorage:", savedPlayerId);
+    
+    // For debugging: clear any saved player ID to ensure fresh start
     if (savedPlayerId) {
-      setPlayerIdState(JSON.parse(savedPlayerId));
+      console.log("Clearing saved player ID for fresh start");
+      localStorage.removeItem('player_id');
+      // Don't load the saved player ID for now
+      // const parsed = JSON.parse(savedPlayerId);
+      // console.log("Setting player ID from localStorage:", parsed);
+      // setPlayerIdState(parsed);
     }
   }, []);
 

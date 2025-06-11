@@ -1,10 +1,10 @@
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Provider } from 'react-redux';
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { store } from './app/store';
+import { Toaster as Sonner } from "./components/ui/sonner";
+import { Toaster } from "./components/ui/toaster";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { MarketProvider } from "./contexts/MarketContext";
 import { WalletProvider } from "./contexts/WalletContext";
 import Index from "./pages/Index";

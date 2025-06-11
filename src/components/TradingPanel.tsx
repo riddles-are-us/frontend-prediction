@@ -1,16 +1,14 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { useToast } from '../hooks/use-toast';
 import { MarketData, PlayerData } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Separator } from './ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 interface TradingPanelProps {
   market: MarketData;
@@ -19,14 +17,15 @@ interface TradingPanelProps {
 }
 
 const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade }) => {
+  const { toast } = useToast();
   const [buyAmount, setBuyAmount] = useState('');
   const [sellShares, setSellShares] = useState('');
   const [selectedPosition, setSelectedPosition] = useState<'YES' | 'NO'>('YES');
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
-  const yesLiquidity = BigInt(market.yes_liquidity);
-  const noLiquidity = BigInt(market.no_liquidity);
+  // Provide default values to handle undefined market data
+  const yesLiquidity = BigInt(market.yes_liquidity || 0);
+  const noLiquidity = BigInt(market.no_liquidity || 0);
   const balance = Number(playerData.data.balance);
   const yesShares = Number(playerData.data.yes_shares);
   const noShares = Number(playerData.data.no_shares);
@@ -38,16 +37,20 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
   const sellSharesNum = parseFloat(sellShares) || 0;
   const betType = selectedPosition === 'YES' ? 1 : 0;
 
-  const sharesReceived = buyAmountNum > 0 ? 
-    MarketCalculations.calculateSharesForBet(betType, buyAmountNum, yesLiquidity, noLiquidity) : 0;
+  // Calculate fees first (1% of total amount)
+  const fees = buyAmountNum > 0 ? MarketCalculations.calculateFees(buyAmountNum) : 0;
+  
+  // Amount actually used for buying shares (after deducting fees)
+  const amountAfterFees = buyAmountNum - fees;
+
+  const sharesReceived = amountAfterFees > 0 ? 
+    MarketCalculations.calculateSharesForBet(betType, amountAfterFees, yesLiquidity, noLiquidity) : 0;
   
   const sellAmount = sellSharesNum > 0 ? 
     MarketCalculations.calculateAmountForShares(betType, sellSharesNum, yesLiquidity, noLiquidity) : 0;
 
-  const buyImpact = buyAmountNum > 0 ? 
-    MarketCalculations.calculateMarketImpact(betType, buyAmountNum, yesLiquidity, noLiquidity) : null;
-
-  const fees = buyAmountNum > 0 ? MarketCalculations.calculateFees(buyAmountNum) : 0;
+  const buyImpact = amountAfterFees > 0 ? 
+    MarketCalculations.calculateMarketImpact(betType, amountAfterFees, yesLiquidity, noLiquidity) : null;
 
   const handleBuy = async () => {
     if (!buyAmount || buyAmountNum <= 0) {
@@ -68,13 +71,24 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
       return;
     }
 
+    if (amountAfterFees <= 0) {
+      toast({
+        title: "Amount Too Small",
+        description: "Amount after fees must be greater than 0",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
+      // Pass the total amount (including fees) to the backend
+      // The backend will handle fee deduction internally
       await onTrade('BUY', betType, buyAmountNum);
       setBuyAmount('');
       toast({
         title: "Trade Submitted",
-        description: `Buying ${selectedPosition} shares for ${buyAmountNum} tokens`,
+        description: `Buying ${selectedPosition} shares for ${buyAmountNum} tokens (${amountAfterFees.toFixed(2)} + ${fees.toFixed(2)} fee)`,
       });
     } catch (error) {
       toast({
@@ -188,7 +202,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 type="number"
                 placeholder="Enter amount"
                 value={buyAmount}
-                onChange={(e) => setBuyAmount(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBuyAmount(e.target.value)}
                 className="text-lg"
               />
               <div className="text-sm text-muted-foreground">
@@ -200,18 +214,22 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
             {buyAmountNum > 0 && (
               <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
                 <div className="flex justify-between">
+                  <span>Amount for Shares:</span>
+                  <span className="font-medium">{amountAfterFees.toFixed(2)} tokens</span>
+                </div>
+                <div className="flex justify-between">
                   <span>Shares Received:</span>
                   <span className="font-medium">{sharesReceived.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Effective Price:</span>
                   <span className="font-medium">
-                    {MarketCalculations.formatPrice(buyAmountNum / sharesReceived)}
+                    {sharesReceived > 0 ? MarketCalculations.formatPrice(amountAfterFees / sharesReceived) : "0%"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Platform Fee (1%):</span>
-                  <span className="font-medium">{fees} tokens</span>
+                  <span className="font-medium">{fees.toFixed(2)} tokens</span>
                 </div>
                 {buyImpact && buyImpact.slippage > 0.02 && (
                   <div className="flex items-center gap-2 text-amber-600">
@@ -224,14 +242,14 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 <Separator />
                 <div className="flex justify-between font-semibold">
                   <span>Total Cost:</span>
-                  <span>{(buyAmountNum + fees).toFixed(2)} tokens</span>
+                  <span>{buyAmountNum.toFixed(2)} tokens</span>
                 </div>
               </div>
             )}
 
             <Button 
               onClick={handleBuy}
-              disabled={!buyAmount || buyAmountNum <= 0 || buyAmountNum > balance || isLoading}
+              disabled={!buyAmount || buyAmountNum <= 0 || buyAmountNum > balance || amountAfterFees <= 0 || isLoading}
               className="w-full price-gradient-yes hover:opacity-90"
             >
               {isLoading ? "Processing..." : `Buy ${selectedPosition} Shares`}
@@ -267,7 +285,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 type="number"
                 placeholder="Enter shares"
                 value={sellShares}
-                onChange={(e) => setSellShares(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSellShares(e.target.value)}
                 className="text-lg"
                 max={selectedPosition === 'YES' ? yesShares : noShares}
               />

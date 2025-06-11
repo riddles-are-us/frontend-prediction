@@ -193,6 +193,32 @@ const Index = () => {
     });
   };
 
+  const handleDeposit = async (amount: number) => {
+    if (!isL2Connected) {
+      toast({
+        title: "App Connection Required", 
+        description: "Please connect to the app first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!playerId) {
+      toast({
+        title: "Registration Required", 
+        description: "Please register as a player first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Note: This would need to be implemented in the API
+    toast({
+      title: "Deposit Initiated", 
+      description: `Depositing ${amount} tokens`,
+    });
+  };
+
   // Admin functions using real API calls
   const handleResolveMarket = async (outcome: boolean) => {
     try {
@@ -254,11 +280,6 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">
                   Connect your wallet to view current market data
                 </p>
-                <div className="flex justify-center gap-2 mt-3">
-                  <Badge variant="outline" className="border-muted-foreground/50">
-                    Loading...
-                  </Badge>
-                </div>
               </div>
             </div>
             
@@ -432,6 +453,7 @@ const Index = () => {
                     playerData={playerData}
                     onClaim={handleClaim}
                     onWithdraw={handleWithdraw}
+                    onDeposit={handleDeposit}
                   />
                 ) : (
                   <Card className="p-8">

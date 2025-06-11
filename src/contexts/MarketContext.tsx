@@ -1,5 +1,5 @@
 import { bnToHexLe } from 'delphinus-curves/src/altjubjub';
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { LeHexBN } from 'zkwasm-minirollup-rpc';
 import { useToast } from '../hooks/use-toast';
 import PredictionMarketAPI from '../services/api';
@@ -46,28 +46,115 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [api, setApi] = useState<PredictionMarketAPI | null>(null);
   const [playerInstalled, setPlayerInstalled] = useState(false);
+  const [apiInitializing, setApiInitializing] = useState(false);
   
   const { l1Account, l2Account, playerId, setPlayerId } = useWallet();
   const { toast } = useToast();
 
+  console.log("MarketProvider render:", {
+    l1Account: !!l1Account,
+    l2Account: !!l2Account,
+    playerId,
+    playerInstalled,
+    api: !!api,
+    apiInitializing
+  });
+
   // Initialize API when L2 account is available
   useEffect(() => {
-    if (l2Account && l2Account.getPrivateKey && !api) {
+    console.log("API initialization useEffect:", {
+      l2Account: !!l2Account,
+      hasGetPrivateKey: l2Account?.getPrivateKey ? true : false,
+      api: !!api,
+      apiInitializing
+    });
+    
+    if (l2Account && l2Account.getPrivateKey && !api && !apiInitializing) {
       initializeAPI();
     }
-  }, [l2Account]);
+  }, [l2Account, api, apiInitializing]);
 
-  // Auto-install player when API is ready
+  // Auto-install player when L2 is connected and API is ready
   useEffect(() => {
-    if (api && !playerInstalled && !playerId) {
-      console.log("API ready, auto-installing player...");
-      handleAutoInstallPlayer();
+    console.log("Auto-install useEffect triggered:", {
+      l2Account: !!l2Account,
+      playerInstalled,
+      api: !!api,
+      playerId,
+      shouldInstall: l2Account && !playerInstalled && api
+    });
+    
+    // If L2 is connected, API is ready, and player is not installed, install player
+    if (l2Account && !playerInstalled && api) {
+      console.log("L2 account connected and API ready, auto-installing player...");
+      
+      // Generate player ID from L2 account's public key
+      const generatePlayerIdFromL2 = (): [number, number] | null => {
+        try {
+          if (l2Account.pubkey) {
+            const pubkey = l2Account.pubkey;
+            const leHexBN = new LeHexBN(bnToHexLe(pubkey));
+            const pkeyArray = leHexBN.toU64Array();
+            const playerId: [number, number] = [Number(pkeyArray[1]), Number(pkeyArray[2])];
+            console.log("Generated player ID from L2 account:", playerId);
+            return playerId;
+          }
+          return null;
+        } catch (error) {
+          console.error("Failed to generate player ID from L2:", error);
+          return null;
+        }
+      };
+      
+      // Simple auto-install without dependencies
+      const autoInstall = async () => {
+        setIsLoading(true);
+        try {
+          console.log("Auto-installing player...");
+          const response = await api.registerPlayer();
+          console.log("Auto-install response:", response);
+          
+          // Generate player ID regardless of API response
+          const generatedPlayerId = generatePlayerIdFromL2();
+          if (generatedPlayerId) {
+            setPlayerId(generatedPlayerId);
+            console.log("Player ID set from L2 account:", generatedPlayerId);
+          }
+          
+          setPlayerInstalled(true);
+          
+          if (response === null) {
+            // Player already exists
+            toast({
+              title: "Player Connected",
+              description: "Successfully connected to existing player account!",
+            });
+          } else {
+            // New player created
+            toast({
+              title: "Player Installed",
+              description: "Successfully created new player account!",
+            });
+          }
+        } catch (error) {
+          console.error('Auto-install failed:', error);
+          toast({
+            title: "Auto-connection Failed", 
+            description: "Failed to auto-connect. Please try manually.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      autoInstall();
     }
-  }, [api, playerInstalled, playerId]);
+  }, [l2Account, playerInstalled, api]);
 
-  // Set up polling when player is installed
+  // Set up polling when API is ready and player is installed
   useEffect(() => {
-    if (playerInstalled && api) {
+    if (api && playerInstalled && playerId) {
       console.log("Player installed, starting data polling...");
       // Load initial data
       loadInitialData();
@@ -81,13 +168,21 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         clearInterval(pollInterval);
       };
     }
-  }, [playerInstalled, api]);
+  }, [api, playerInstalled, playerId]);
 
   const initializeAPI = () => {
     if (!l2Account?.getPrivateKey()) {
       console.warn('No L2 account private key available for API initialization');
       return;
     }
+
+    if (apiInitializing || api) {
+      console.log('API already initializing or initialized, skipping');
+      return;
+    }
+
+    setApiInitializing(true);
+    console.log('Starting API initialization...');
 
     // Log pkeyArray values during API initialization
     if (l2Account.pubkey) {
@@ -107,58 +202,97 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       privkey: l2Account.getPrivateKey(),
     };
 
-    console.log('Initializing API with config:', { serverUrl: config.serverUrl });
+    console.log('Initializing real API connection to:', config.serverUrl);
     const apiInstance = new PredictionMarketAPI(config);
     setApi(apiInstance);
+    setApiInitializing(false);
+    console.log('API initialization completed');
   };
 
-  const handleAutoInstallPlayer = async () => {
-    try {
-      await installPlayer();
-      setPlayerInstalled(true);
-    } catch (error) {
-      console.error('Auto-install player failed:', error);
-      // Retry after 3 seconds
-      setTimeout(() => {
-        handleAutoInstallPlayer();
-      }, 3000);
-    }
-  };
-
-  const loadInitialData = async () => {
-    console.log("Loading initial market and player data from API...");
-    setIsLoading(true);
-    try {
-      await refreshData();
-    } catch (error) {
-      console.error('Failed to load initial data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const installPlayer = async () => {
-    if (!api) {
-      throw new Error('API not initialized');
-    }
-
+  const installPlayer = useCallback(async () => {
     setIsLoading(true);
     try {
       console.log("Installing player via API...");
+      console.log("API available:", !!api);
       
+      if (!api) {
+        throw new Error('API not ready yet');
+      }
+
+      console.log("Using API instance for player installation");
+      
+      // If we already have a playerId from localStorage, try to verify it first
+      if (playerId) {
+        console.log("Player ID exists, verifying with API:", playerId);
+        try {
+          const existingPlayerState = await api.queryPlayerState(playerId);
+          if (existingPlayerState) {
+            console.log("Existing player verified with API");
+            setPlayerInstalled(true);
+            toast({
+              title: "Player Reconnected",
+              description: "Successfully reconnected to existing player!",
+            });
+            return;
+          }
+        } catch (error) {
+          console.log("Failed to verify existing player, will register new one:", error);
+        }
+      }
+      
+      // Generate player ID from L2 account
+      if (!l2Account) {
+        throw new Error('L2 account not connected');
+      }
+
+      const generatePlayerIdFromL2 = (): [number, number] | null => {
+        try {
+          if (l2Account.pubkey) {
+            const pubkey = l2Account.pubkey;
+            const leHexBN = new LeHexBN(bnToHexLe(pubkey));
+            const pkeyArray = leHexBN.toU64Array();
+            const playerId: [number, number] = [Number(pkeyArray[1]), Number(pkeyArray[2])];
+            console.log("Generated player ID from L2 account:", playerId);
+            return playerId;
+          }
+          return null;
+        } catch (error) {
+          console.error("Failed to generate player ID from L2:", error);
+          return null;
+        }
+      };
+
+      // Call real API to register new player
       const response = await api.registerPlayer();
       console.log("Player registration response:", response);
       
-      // Extract player ID from response
-      const mockPlayerId: [number, number] = [1, Date.now()];
-      setPlayerId(mockPlayerId);
+      // Generate player ID regardless of API response
+      const generatedPlayerId = generatePlayerIdFromL2();
+      if (generatedPlayerId) {
+        setPlayerId(generatedPlayerId);
+        console.log("Player ID set from L2 account:", generatedPlayerId);
+      } else {
+        throw new Error('Failed to generate player ID from L2 account');
+      }
       
-      console.log("Player installed successfully with ID:", mockPlayerId);
+      // Mark player as installed only after successful API call
+      setPlayerInstalled(true);
       
-      toast({
-        title: "Player Installed",
-        description: "Successfully connected to the prediction market!",
-      });
+      console.log("Player installed successfully via API");
+      
+      if (response === null) {
+        // Player already exists
+        toast({
+          title: "Player Connected",
+          description: "Successfully connected to existing player account!",
+        });
+      } else {
+        // New player created
+        toast({
+          title: "Player Installed",
+          description: "Successfully created new player account!",
+        });
+      }
     } catch (error) {
       console.error('Install player failed:', error);
       toast({
@@ -167,6 +301,32 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         variant: "destructive",
       });
       throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [api, l2Account, playerId, setPlayerId, toast]);
+
+  const handleAutoInstallPlayer = useCallback(async () => {
+    try {
+      await installPlayer();
+    } catch (error) {
+      console.error('Auto-install player failed:', error);
+      // Let the useEffect retry when conditions change
+    }
+  }, [installPlayer]);
+
+  const loadInitialData = async () => {
+    console.log("Loading initial market and player data...");
+    setIsLoading(true);
+    try {
+      if (api) {
+        await refreshData();
+      } else {
+        // Show loading message until API is ready
+        console.log("API not ready yet, will load data when API initializes");
+      }
+    } catch (error) {
+      console.error('Failed to load initial data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -333,46 +493,101 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       return;
     }
 
+    if (!playerId) {
+      console.warn('No player ID available for data refresh');
+      return;
+    }
+
     try {
       console.log('Fetching market and player data from API...');
       
-      // Query market state
-      const marketState = await api.queryMarketState();
-      console.log('Market state response:', marketState);
+      // Query the combined state that returns both market and player data
+      const fullState = await api.queryPlayerState(playerId);
+      console.log('Full state response:', fullState);
       
-      if (marketState) {
-        // Parse and set market data based on API response structure
-        const parsedMarketData: MarketData = {
-          title: marketState.title || "Will Bitcoin reach $100,000 USD by December 31, 2024?",
-          yes_liquidity: marketState.yes_liquidity || "0",
-          no_liquidity: marketState.no_liquidity || "0", 
-          total_volume: marketState.total_volume || "0",
-          resolved: marketState.resolved || false,
-          outcome: marketState.outcome || false,
-          total_fees_collected: marketState.total_fees_collected || "0",
+      if (fullState && fullState.state && fullState.state.market) {
+        // Transform market data from the response structure
+        const marketFromResponse = fullState.state.market;
+        const stateFromResponse = fullState.state;
+        
+        // Calculate time information based on counter
+        const currentCounter = stateFromResponse.counter || 0;
+        const startTime = marketFromResponse.start_time || 0;
+        const endTime = marketFromResponse.end_time || 0;
+        const counterInterval = 5; // 5 seconds per counter increment
+        
+        // Calculate elapsed and remaining time
+        const elapsedCounters = currentCounter - startTime;
+        const remainingCounters = endTime - currentCounter;
+        const remainingSeconds = Math.max(0, remainingCounters * counterInterval);
+        
+        // Format remaining time
+        const formatTimeRemaining = (seconds: number): string => {
+          if (seconds <= 0) return "Market Ended";
+          
+          const days = Math.floor(seconds / 86400);
+          const hours = Math.floor((seconds % 86400) / 3600);
+          const minutes = Math.floor((seconds % 3600) / 60);
+          const secs = seconds % 60;
+          
+          if (days > 0) {
+            return `${days}d ${hours}h ${minutes}m`;
+          } else if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+          } else if (minutes > 0) {
+            return `${minutes}m ${secs}s`;
+          } else {
+            return `${secs}s`;
+          }
         };
+        
+        const parsedMarketData: MarketData = {
+          title: marketFromResponse.title || "Bitcoin $100K by 2024",
+          yes_liquidity: marketFromResponse.yes_liquidity?.toString() || "0",
+          no_liquidity: marketFromResponse.no_liquidity?.toString() || "0", 
+          total_volume: marketFromResponse.total_volume?.toString() || "0",
+          resolved: marketFromResponse.resolved || false,
+          outcome: marketFromResponse.outcome,
+          total_fees_collected: marketFromResponse.total_fees_collected?.toString() || "0",
+          // Add time-related fields
+          counter: currentCounter,
+          start_time: startTime,
+          end_time: endTime,
+          time_remaining: formatTimeRemaining(remainingSeconds),
+          elapsed_time: elapsedCounters * counterInterval,
+          remaining_time: remainingSeconds,
+        };
+        console.log('Parsed market data with time info:', {
+          currentCounter,
+          startTime,
+          endTime,
+          elapsedCounters,
+          remainingCounters,
+          remainingSeconds,
+          timeRemaining: parsedMarketData.time_remaining
+        });
         setMarketData(parsedMarketData);
+      } else {
+        console.log('No market data received from API');
       }
 
-      // Query player state if player ID is available
-      if (playerId) {
-        const playerState = await api.queryPlayerState(playerId);
-        console.log('Player state response:', playerState);
-        
-        if (playerState) {
-          // Parse and set player data based on API response structure
-          const parsedPlayerData: PlayerData = {
-            player_id: playerId,
-            data: {
-              balance: playerState.balance || "0",
-              yes_shares: playerState.yes_shares || "0",
-              no_shares: playerState.no_shares || "0",
-              claimed: playerState.claimed || false,
-              nonce: playerState.nonce || "0",
-            },
-          };
-          setPlayerData(parsedPlayerData);
-        }
+      // Transform player data from the response structure
+      if (fullState && fullState.player) {
+        const playerFromResponse = fullState.player;
+        const parsedPlayerData: PlayerData = {
+          player_id: playerFromResponse.player_id || playerId,
+          data: {
+            balance: playerFromResponse.data.balance?.toString() || "0",
+            yes_shares: playerFromResponse.data.yes_shares?.toString() || "0",
+            no_shares: playerFromResponse.data.no_shares?.toString() || "0",
+            claimed: playerFromResponse.data.claimed || false,
+            nonce: playerFromResponse.nonce?.toString() || "0",
+          },
+        };
+        console.log('Parsed player data:', parsedPlayerData);
+        setPlayerData(parsedPlayerData);
+      } else {
+        console.log('No player data received from API');
       }
     } catch (error) {
       console.error('Failed to refresh data from API:', error);

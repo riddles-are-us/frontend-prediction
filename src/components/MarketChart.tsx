@@ -1,29 +1,41 @@
-
-import React, { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { TrendingUp } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { MarketData } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface MarketChartProps {
   market: MarketData;
 }
 
 // Mock historical data for demonstration
-const generateMockData = (currentYesPrice: number, currentNoPrice: number) => {
+const generateMockData = (currentYesPrice: number, currentNoPrice: number, market: MarketData) => {
   const data = [];
-  const baseTime = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
+  const now = Date.now();
+  
+  // Calculate the actual start time based on counter
+  // Each counter represents 5 seconds
+  const currentCounter = market.counter || 0;
+  const startTime = market.start_time || 0;
+  const elapsedCounters = currentCounter - startTime;
+  const elapsedSeconds = elapsedCounters * 5;
+  const marketStartTime = now - (elapsedSeconds * 1000);
+  
+  // Generate 24 hours of data with 10-minute intervals (144 data points)
+  const dataPoints = 144;
+  const intervalMs = (24 * 60 * 60 * 1000) / dataPoints; // 10 minutes in milliseconds
   
   // Start with slightly different prices and trend toward current
   let yesPrice = currentYesPrice + (Math.random() - 0.5) * 0.2;
   let noPrice = 1 - yesPrice;
   
-  for (let i = 0; i < 144; i++) { // 10-minute intervals over 24 hours
-    const timestamp = baseTime + (i * 10 * 60 * 1000);
+  for (let i = 0; i < dataPoints; i++) {
+    // Calculate timestamp from 24 hours ago to now
+    const timestamp = now - ((dataPoints - 1 - i) * intervalMs);
     
     // Add some randomness and trend toward current prices
-    const trendFactor = i / 144;
+    const trendFactor = i / dataPoints;
     const randomFactor = (Math.random() - 0.5) * 0.02;
     
     yesPrice = yesPrice * (1 + randomFactor) + (currentYesPrice - yesPrice) * trendFactor * 0.02;
@@ -36,9 +48,17 @@ const generateMockData = (currentYesPrice: number, currentNoPrice: number) => {
     data.push({
       time: new Date(timestamp).toLocaleTimeString('en-US', { 
         hour: '2-digit', 
-        minute: '2-digit' 
+        minute: '2-digit',
+        hour12: false // Use 24-hour format for clarity
       }),
       timestamp,
+      fullTime: new Date(timestamp).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }),
       yesPrice: yesPrice * 100,
       noPrice: noPrice * 100,
       volume: Math.floor(Math.random() * 10000) + 1000
@@ -49,20 +69,34 @@ const generateMockData = (currentYesPrice: number, currentNoPrice: number) => {
 };
 
 const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
-  const yesLiquidity = BigInt(market.yes_liquidity);
-  const noLiquidity = BigInt(market.no_liquidity);
+  // Add a timestamp state to force chart regeneration every minute
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Update current time every minute to keep chart timestamps current
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Provide default values to handle undefined market data
+  const yesLiquidity = BigInt(market.yes_liquidity || 0);
+  const noLiquidity = BigInt(market.no_liquidity || 0);
   const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
   
   const chartData = useMemo(() => 
-    generateMockData(prices.yesPrice, prices.noPrice), 
-    [prices.yesPrice, prices.noPrice]
+    generateMockData(prices.yesPrice, prices.noPrice, market), 
+    [prices.yesPrice, prices.noPrice, market, currentTime]
   );
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const dataPoint = payload[0].payload;
       return (
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-medium mb-2">{label}</p>
+          <p className="font-medium mb-2">{dataPoint.fullTime || label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
               {entry.dataKey === 'yesPrice' ? 'YES' : 'NO'}: {entry.value.toFixed(1)}%
@@ -121,8 +155,10 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
                 fontSize={12}
                 interval="preserveStartEnd"
                 tickFormatter={(value, index) => {
-                  // Show only every 6th tick to avoid crowding
-                  return index % 6 === 0 ? value : '';
+                  // Show every 12th tick (approximately every 2 hours) to avoid crowding
+                  const dataLength = chartData.length;
+                  const interval = Math.floor(dataLength / 6); // Show about 6 labels across the chart
+                  return index % interval === 0 ? value : '';
                 }}
               />
               <YAxis 
@@ -156,7 +192,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">24h Volume</div>
             <div className="font-semibold">
-              {MarketCalculations.formatNumber(Number(market.total_volume))}
+              {MarketCalculations.formatNumber(Number(market.total_volume || 0))}
             </div>
           </div>
           <div className="space-y-1">
@@ -170,7 +206,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Fees Collected</div>
             <div className="font-semibold">
-              {MarketCalculations.formatNumber(Number(market.total_fees_collected))}
+              {MarketCalculations.formatNumber(Number(market.total_fees_collected || 0))}
             </div>
           </div>
         </div>

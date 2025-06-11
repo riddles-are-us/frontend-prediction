@@ -1,4 +1,4 @@
-import { ZKWasmAppRpc } from 'zkwasm-minirollup-rpc';
+import { createCommand, PlayerConvention, ZKWasmAppRpc } from 'zkwasm-minirollup-rpc';
 import { CommandType } from "../types/market";
 
 interface ServerConfig {
@@ -6,71 +6,96 @@ interface ServerConfig {
   privkey: string;
 }
 
-class PredictionMarketAPI {
-  private rpc: ZKWasmAppRpc;
+class PredictionMarketAPI extends PlayerConvention {
+  public rpc: ZKWasmAppRpc;
   private privkey: string;
 
   constructor(config: ServerConfig) {
+    const rpc = new ZKWasmAppRpc(config.serverUrl);
+    super(config.privkey, rpc, BigInt(CommandType.DEPOSIT), BigInt(CommandType.WITHDRAW));
     this.privkey = config.privkey;
-    this.rpc = new ZKWasmAppRpc(config.serverUrl);
+    this.rpc = rpc;
+    this.processingKey = config.privkey;
   }
 
-  // Helper function to create command array
-  private createCommand(...args: (string | number)[]): BigUint64Array {
-    return new BigUint64Array(args.map(arg => BigInt(arg)));
+  async sendTransactionWithCommand(cmd: BigUint64Array) {
+    try {
+      let result = await this.rpc.sendTransaction(cmd, this.processingKey);
+      return result;
+    } catch (e) {
+      if (e instanceof Error) {
+        console.log(e.message);
+      }
+      throw e;
+    }
   }
 
   // Register a new player
   async registerPlayer(): Promise<any> {
-    const command = this.createCommand(CommandType.INSTALL_PLAYER);
-    const response = await this.rpc.sendTransaction(command, this.privkey);
-    return response;
+    try {
+      const command = createCommand(0n, BigInt(CommandType.INSTALL_PLAYER), []);
+      return await this.sendTransactionWithCommand(command);
+    } catch (e) {
+      if (e instanceof Error && e.message === "PlayerAlreadyExists") {
+        console.log("Player already exists, skipping installation");
+        return null; // Not an error, just already exists
+      }
+      throw e; // Re-throw other errors
+    }
   }
 
   // Place a bet: BET command
   async placeBet(betType: number, amount: string): Promise<any> {
-    const command = this.createCommand(
-      CommandType.BET,
-      betType,
-      amount
-    );
-    const response = await this.rpc.sendTransaction(command, this.privkey);
-    return response;
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.BET), [BigInt(betType), BigInt(amount)]);
+    return await this.sendTransactionWithCommand(command);
   }
 
   // Sell shares: SELL command
   async sellShares(betType: number, amount: string): Promise<any> {
-    const command = this.createCommand(
-      CommandType.SELL,
-      betType,
-      amount
-    );
-    const response = await this.rpc.sendTransaction(command, this.privkey);
-    return response;
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.SELL), [BigInt(betType), BigInt(amount)]);
+    return await this.sendTransactionWithCommand(command);
   }
 
   // Claim winnings: CLAIM command
   async claimWinnings(): Promise<any> {
-    const command = this.createCommand(CommandType.CLAIM);
-    const response = await this.rpc.sendTransaction(command, this.privkey);
-    return response;
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.CLAIM), []);
+    return await this.sendTransactionWithCommand(command);
   }
 
   // Resolve market (admin only): RESOLVE command
   async resolveMarket(outcome: boolean): Promise<any> {
-    const command = this.createCommand(
-      CommandType.RESOLVE,
-      outcome ? 1 : 0
-    );
-    const response = await this.rpc.sendTransaction(command, this.privkey);
-    return response;
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.RESOLVE), [outcome ? 1n : 0n]);
+    return await this.sendTransactionWithCommand(command);
   }
 
   // Withdraw fees (admin only): WITHDRAW_FEES command
   async withdrawFees(): Promise<any> {
-    const command = this.createCommand(CommandType.WITHDRAW_FEES);
-    const response = await this.rpc.sendTransaction(command, this.privkey);
-    return response;
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.WITHDRAW_FEES), []);
+    return await this.sendTransactionWithCommand(command);
+  }
+
+  // Deposit funds: DEPOSIT command
+  async depositFunds(playerId: [number, number], amount: string): Promise<any> {
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.DEPOSIT), [
+      BigInt(playerId[0]),
+      BigInt(playerId[1]),
+      0n,
+      BigInt(amount)
+    ]);
+    return await this.sendTransactionWithCommand(command);
+  }
+
+  // Withdraw funds: WITHDRAW command
+  async withdrawFunds(amount: string): Promise<any> {
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.WITHDRAW), [0n, BigInt(amount), 0n, 0n]);
+    return await this.sendTransactionWithCommand(command);
   }
 
   // Query market state
@@ -101,28 +126,6 @@ class PredictionMarketAPI {
       console.error('Failed to query player state:', error);
       throw error;
     }
-  }
-
-  // Deposit funds: DEPOSIT command
-  async depositFunds(playerId: [number, number], amount: string): Promise<any> {
-    const command = this.createCommand(
-      CommandType.DEPOSIT,
-      playerId[0],
-      playerId[1],
-      amount
-    );
-    const response = await this.rpc.sendTransaction(command, this.privkey);
-    return response;
-  }
-
-  // Withdraw funds: WITHDRAW command
-  async withdrawFunds(amount: string): Promise<any> {
-    const command = this.createCommand(
-      CommandType.WITHDRAW,
-      amount
-    );
-    const response = await this.rpc.sendTransaction(command, this.privkey);
-    return response;
   }
 
   // Query configuration

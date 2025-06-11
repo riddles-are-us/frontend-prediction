@@ -8,6 +8,13 @@ export interface MarketData {
   resolved: boolean;
   outcome: boolean;
   total_fees_collected: string;
+  // Time-related fields
+  counter?: number;
+  start_time?: number;
+  end_time?: number;
+  time_remaining?: string;
+  elapsed_time?: number;
+  remaining_time?: number;
 }
 
 export interface PlayerData {

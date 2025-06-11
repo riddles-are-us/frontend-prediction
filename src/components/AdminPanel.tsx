@@ -1,16 +1,16 @@
 
+import { Award, DollarSign, Settings, TrendingUp, Users } from 'lucide-react';
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Settings, DollarSign, TrendingUp, Users, Award } from 'lucide-react';
+import { useToast } from '../hooks/use-toast';
 import { MarketData } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
-import { useToast } from '@/hooks/use-toast';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Separator } from './ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 interface AdminPanelProps {
   market: MarketData;
@@ -42,10 +42,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     );
   }
 
-  const feesCollected = Number(market.total_fees_collected);
-  const totalVolume = Number(market.total_volume);
-  const yesLiquidity = BigInt(market.yes_liquidity);
-  const noLiquidity = BigInt(market.no_liquidity);
+  // Provide default values to handle undefined market data
+  const feesCollected = Number(market.total_fees_collected || 0);
+  const totalVolume = Number(market.total_volume || 0);
+  const yesLiquidity = BigInt(market.yes_liquidity || 0);
+  const noLiquidity = BigInt(market.no_liquidity || 0);
   const totalLiquidity = MarketCalculations.getTotalLiquidity(yesLiquidity, noLiquidity);
 
   const handleResolveMarket = async (outcome: boolean) => {

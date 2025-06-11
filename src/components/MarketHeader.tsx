@@ -1,21 +1,97 @@
-
-import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Clock, TrendingUp, Users } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { MarketData } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
+import { Badge } from './ui/badge';
+import { Card } from './ui/card';
 
 interface MarketHeaderProps {
   market: MarketData;
-  timeRemaining?: string;
 }
 
-const MarketHeader: React.FC<MarketHeaderProps> = ({ market, timeRemaining = "23h 45m" }) => {
-  const yesLiquidity = BigInt(market.yes_liquidity);
-  const noLiquidity = BigInt(market.no_liquidity);
+const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
+  const [liveTimeRemaining, setLiveTimeRemaining] = useState<string>(market.time_remaining || "Loading...");
+
+  // Update time remaining every second for real-time countdown
+  useEffect(() => {
+    if (!market.remaining_time || market.remaining_time <= 0) {
+      setLiveTimeRemaining("Market Ended");
+      return;
+    }
+
+    // Initial time from market data
+    let remainingSeconds = market.remaining_time;
+    setLiveTimeRemaining(market.time_remaining || "Loading...");
+
+    const interval = setInterval(() => {
+      remainingSeconds -= 1;
+      
+      if (remainingSeconds <= 0) {
+        setLiveTimeRemaining("Market Ended");
+        clearInterval(interval);
+        return;
+      }
+
+      // Format time
+      const formatTime = (seconds: number): string => {
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        
+        if (days > 0) {
+          return `${days}d ${hours}h ${minutes}m`;
+        } else if (hours > 0) {
+          return `${hours}h ${minutes}m`;
+        } else if (minutes > 0) {
+          return `${minutes}m ${secs}s`;
+        } else {
+          return `${secs}s`;
+        }
+      };
+
+      setLiveTimeRemaining(formatTime(remainingSeconds));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [market.remaining_time, market.time_remaining]);
+
+  // Provide default values to handle undefined market data
+  const yesLiquidity = BigInt(market.yes_liquidity || 0);
+  const noLiquidity = BigInt(market.no_liquidity || 0);
   const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
   const totalLiquidity = MarketCalculations.getTotalLiquidity(yesLiquidity, noLiquidity);
+
+  // Test price calculation with unequal liquidity (for debugging)
+  if (yesLiquidity === noLiquidity && yesLiquidity > 0n) {
+    console.log('MarketHeader - Equal liquidity detected:', {
+      yesLiquidity: yesLiquidity.toString(),
+      noLiquidity: noLiquidity.toString(),
+      yesPrice: prices.yesPrice,
+      noPrice: prices.noPrice,
+      yesChance: (prices.yesPrice * 100).toFixed(1) + '%',
+      noChance: (prices.noPrice * 100).toFixed(1) + '%'
+    });
+    
+    // Test with different liquidity to verify calculation
+    const testPrices = MarketCalculations.calculatePrices(BigInt(800000), BigInt(1200000));
+    console.log('MarketHeader - Test with unequal liquidity (800K YES, 1200K NO):', {
+      yesPrice: testPrices.yesPrice,
+      noPrice: testPrices.noPrice,
+      yesChance: (testPrices.yesPrice * 100).toFixed(1) + '%',
+      noChance: (testPrices.noPrice * 100).toFixed(1) + '%'
+    });
+  }
+
+  // Debug logging for price calculation
+  console.log('MarketHeader - Liquidity and Price Calculation:', {
+    yesLiquidity: yesLiquidity.toString(),
+    noLiquidity: noLiquidity.toString(),
+    totalLiquidity,
+    prices,
+    yesChance: MarketCalculations.priceToImpliedProbability(prices.yesPrice),
+    noChance: MarketCalculations.priceToImpliedProbability(prices.noPrice)
+  });
 
   return (
     <Card className="gradient-card market-glow p-6 mb-6 animate-fade-in">
@@ -40,13 +116,13 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market, timeRemaining = "23
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="h-5 w-5" />
-            <span className="font-medium">{timeRemaining}</span>
+            <span className="font-medium">{liveTimeRemaining}</span>
           </div>
           
           <div className="flex items-center gap-2 text-muted-foreground">
             <TrendingUp className="h-5 w-5" />
             <span className="font-medium">
-              ${MarketCalculations.formatNumber(Number(market.total_volume))} Volume
+              ${MarketCalculations.formatNumber(Number(market.total_volume || 0))} Volume
             </span>
           </div>
           
