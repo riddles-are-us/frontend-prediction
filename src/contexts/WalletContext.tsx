@@ -1,5 +1,7 @@
+import { bnToHexLe } from 'delphinus-curves/src/altjubjub';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { AccountSlice } from 'zkwasm-minirollup-browser';
+import { LeHexBN } from 'zkwasm-minirollup-rpc';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 
 interface WalletContextType {
@@ -93,6 +95,20 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         
         if (AccountSlice.loginL2AccountAsync.fulfilled.match(resultAction)) {
           console.log("L2 account connected successfully:", resultAction.payload);
+          
+          // Log pkeyArray values for debugging
+          if (resultAction.payload && resultAction.payload.pubkey) {
+            try {
+              const pubkey = resultAction.payload.pubkey;
+              const leHexBN = new LeHexBN(bnToHexLe(pubkey));
+              const pkeyArray = leHexBN.toU64Array();
+              console.log("pkeyArray[1]:", pkeyArray[1]);
+              console.log("pkeyArray[2]:", pkeyArray[2]);
+            } catch (error) {
+              console.error("Failed to extract pkeyArray:", error);
+            }
+          }
+          
           return Promise.resolve();
         } else if (AccountSlice.loginL2AccountAsync.rejected.match(resultAction)) {
           console.error("L2 account connection failed:", resultAction.error);

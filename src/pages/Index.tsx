@@ -250,16 +250,13 @@ const Index = () => {
             
             <div className="space-y-4">
               <div className="p-4 bg-muted/50 rounded-lg">
-                <h3 className="font-semibold mb-2">Current Market</h3>
+                <h3 className="font-semibold mb-2">Connect to View Market</h3>
                 <p className="text-sm text-muted-foreground">
-                  Will Bitcoin reach $100,000 USD by December 31, 2024?
+                  Connect your wallet to view current market data
                 </p>
                 <div className="flex justify-center gap-2 mt-3">
-                  <Badge variant="outline" className="border-bull-500 text-bull-600">
-                    YES {yesPercentage}%
-                  </Badge>
-                  <Badge variant="outline" className="border-bear-500 text-bear-600">
-                    NO {noPercentage}%
+                  <Badge variant="outline" className="border-muted-foreground/50">
+                    Loading...
                   </Badge>
                 </div>
               </div>
@@ -377,13 +374,29 @@ const Index = () => {
         </div>
 
         {/* Market Header */}
-        {marketData && <MarketHeader market={marketData} />}
+        {marketData ? (
+          <MarketHeader market={marketData} />
+        ) : (
+          <Card className="p-6">
+            <div className="text-center text-muted-foreground">
+              <div className="animate-pulse">Loading market data from localhost:3000...</div>
+            </div>
+          </Card>
+        )}
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Chart */}
           <div className="lg:col-span-2">
-            {marketData && <MarketChart market={marketData} />}
+            {marketData ? (
+              <MarketChart market={marketData} />
+            ) : (
+              <Card className="p-8">
+                <div className="text-center text-muted-foreground">
+                  <div className="animate-pulse">Loading chart data...</div>
+                </div>
+              </Card>
+            )}
           </div>
 
           {/* Right Column - Trading/Portfolio */}
@@ -402,9 +415,13 @@ const Index = () => {
                     onTrade={handleTrade}
                   />
                 ) : (
-                  <div className="text-center p-8 text-muted-foreground">
-                    Loading market data...
-                  </div>
+                  <Card className="p-8">
+                    <div className="text-center text-muted-foreground">
+                      <div className="animate-pulse">
+                        {!marketData ? "Loading market data..." : "Loading player data..."}
+                      </div>
+                    </div>
+                  </Card>
                 )}
               </TabsContent>
               
@@ -417,9 +434,13 @@ const Index = () => {
                     onWithdraw={handleWithdraw}
                   />
                 ) : (
-                  <div className="text-center p-8 text-muted-foreground">
-                    Loading portfolio data...
-                  </div>
+                  <Card className="p-8">
+                    <div className="text-center text-muted-foreground">
+                      <div className="animate-pulse">
+                        {!marketData ? "Loading market data..." : "Loading portfolio data..."}
+                      </div>
+                    </div>
+                  </Card>
                 )}
               </TabsContent>
             </Tabs>
@@ -427,15 +448,23 @@ const Index = () => {
         </div>
 
         {/* Admin Panel */}
-        {isAdmin && marketData && (
+        {isAdmin && (
           <div className="mt-8">
-            <AdminPanel
-              market={marketData}
-              isAdmin={isAdmin}
-              onResolveMarket={handleResolveMarket}
-              onWithdrawFees={handleWithdrawFees}
-              onDepositFunds={handleDepositFunds}
-            />
+            {marketData ? (
+              <AdminPanel
+                market={marketData}
+                isAdmin={isAdmin}
+                onResolveMarket={handleResolveMarket}
+                onWithdrawFees={handleWithdrawFees}
+                onDepositFunds={handleDepositFunds}
+              />
+            ) : (
+              <Card className="p-8">
+                <div className="text-center text-muted-foreground">
+                  <div className="animate-pulse">Loading admin data...</div>
+                </div>
+              </Card>
+            )}
           </div>
         )}
 
