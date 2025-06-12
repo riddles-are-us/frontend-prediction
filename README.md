@@ -30,7 +30,6 @@ Create a `.env` file with the following variables:
 
 ```env
 REACT_APP_RPC_URL=http://localhost:3000
-REACT_APP_PRIVATE_KEY=your_private_key_here
 ```
 
 ## Build
