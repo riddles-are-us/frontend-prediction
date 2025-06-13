@@ -29,7 +29,9 @@ npm run dev
 Create a `.env` file with the following variables:
 
 ```env
-REACT_APP_RPC_URL=http://localhost:3000
+REACT_APP_CHAIN_ID=11155111
+REACT_APP_DEPOSIT_CONTRACT=
+REACT_APP_TOKEN_CONTRACT=
 ```
 
 ## Build

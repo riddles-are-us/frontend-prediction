@@ -43,7 +43,7 @@ interface MarketProviderProps {
 
 // Default server configuration
 const DEFAULT_CONFIG = {
-  serverUrl: "http://localhost:3000", // RPC server URL
+  serverUrl: "https://rpc.btcprediction.zkwasm.ai", // RPC server URL
 };
 
 export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
@@ -607,7 +607,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       if (!marketData && !playerData) {
         toast({
           title: "Connection Error",
-          description: "Failed to connect to localhost:3000. Make sure the server is running.",
+          description: "Failed to connect to server. Make sure the server is running.",
           variant: "destructive",
         });
       }

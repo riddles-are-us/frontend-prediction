@@ -401,7 +401,7 @@ const Index = () => {
         ) : (
           <Card className="p-6">
             <div className="text-center text-muted-foreground">
-              <div className="animate-pulse">Loading market data from localhost:3000...</div>
+              <div className="animate-pulse">Loading market data from server...</div>
             </div>
           </Card>
         )}
