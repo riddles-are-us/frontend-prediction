@@ -155,7 +155,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Price Chart (24H)
+            Price Chart
           </div>
           <div className="flex gap-4 text-sm">
             <div className="flex items-center gap-1">
@@ -225,7 +225,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
         
         <div className="mt-4 grid grid-cols-3 gap-4 text-center">
           <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">24h Volume</div>
+            <div className="text-sm text-muted-foreground">Volume</div>
             <div className="font-semibold">
               {MarketCalculations.formatNumber(Number(market.total_volume || 0))}
             </div>
