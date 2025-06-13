@@ -41,7 +41,7 @@ interface MarketProviderProps {
   children: ReactNode;
 }
 
-Default server configuration
+// Default server configuration
 const DEFAULT_CONFIG = {
   serverUrl: "https://rpc.btcprediction.zkwasm.ai", // RPC server URL
 };
