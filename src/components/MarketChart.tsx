@@ -93,6 +93,44 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
     });
   }, [chartData, market, currentTime]);
 
+  // Calculate trend indicators based on current and previous counter prices
+  const calculatePriceTrends = useMemo(() => {
+    if (!chartData || chartData.length < 2 || !market?.counter) {
+      return { yesTrend: 0, noTrend: 0 };
+    }
+
+    const currentCounter = market.counter;
+    
+    // Find the current counter's price data
+    const currentData = chartData.find(point => point.counter === currentCounter);
+    
+    // Find the previous counter's price data
+    const previousData = chartData.find(point => point.counter === currentCounter - 1);
+    
+    if (!currentData || !previousData) {
+      // Fallback to latest chart data comparison if exact counter match not found
+      const latestData = chartData[chartData.length - 1];
+      const prevData = chartData[chartData.length - 2];
+      if (latestData && prevData) {
+        return {
+          yesTrend: (latestData.yesPrice * 100) - (prevData.yesPrice * 100),
+          noTrend: (latestData.noPrice * 100) - (prevData.noPrice * 100)
+        };
+      }
+      return { yesTrend: 0, noTrend: 0 };
+    }
+    
+    return {
+      yesTrend: (currentData.yesPrice * 100) - (previousData.yesPrice * 100),
+      noTrend: (currentData.noPrice * 100) - (previousData.noPrice * 100)
+    };
+  }, [chartData, market?.counter]);
+
+  const { yesTrend, noTrend } = calculatePriceTrends;
+
+  // Get latest data for display
+  const latestData = transformedChartData[transformedChartData.length - 1];
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const dataPoint = payload[0].payload;
@@ -111,12 +149,6 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
     return null;
   };
 
-  // Get trend indicators from real data
-  const latestData = transformedChartData[transformedChartData.length - 1];
-  const previousData = transformedChartData[transformedChartData.length - 2];
-  const yesTrend = previousData ? latestData.yesPrice - previousData.yesPrice : 0;
-  const noTrend = previousData ? latestData.noPrice - previousData.noPrice : 0;
-
   return (
     <Card className="gradient-card animate-fade-in">
       <CardHeader>
@@ -128,11 +160,11 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           <div className="flex gap-4 text-sm">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-bull-500 rounded-full"></div>
-              <span>YES {yesTrend > 0 ? '↗' : '↘'} {latestData.yesPrice.toFixed(1)}%</span>
+              <span>YES {yesTrend > 0 ? '↗' : yesTrend < 0 ? '↘' : '→'} {latestData.yesPrice.toFixed(1)}%</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-bear-500 rounded-full"></div>
-              <span>NO {noTrend > 0 ? '↗' : '↘'} {latestData.noPrice.toFixed(1)}%</span>
+              <span>NO {noTrend > 0 ? '↗' : noTrend < 0 ? '↘' : '→'} {latestData.noPrice.toFixed(1)}%</span>
             </div>
           </div>
         </CardTitle>
