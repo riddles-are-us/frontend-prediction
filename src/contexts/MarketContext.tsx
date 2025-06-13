@@ -89,14 +89,15 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       console.log("L2 account connected and API ready, auto-installing player...");
       
       // Generate player ID from L2 account's public key
-      const generatePlayerIdFromL2 = (): [number, number] | null => {
+      const generatePlayerIdFromL2 = (): [string, string] | null => {
         try {
           if (l2Account.pubkey) {
             const pubkey = l2Account.pubkey;
             const leHexBN = new LeHexBN(bnToHexLe(pubkey));
             const pkeyArray = leHexBN.toU64Array();
-            const playerId: [number, number] = [Number(pkeyArray[1]), Number(pkeyArray[2])];
+            const playerId: [string, string] = [pkeyArray[1].toString(), pkeyArray[2].toString()];
             console.log("Generated player ID from L2 account:", playerId);
+            console.log("Original bigint values:", pkeyArray[1], pkeyArray[2]);
             return playerId;
           }
           return null;
@@ -245,14 +246,15 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         throw new Error('L2 account not connected');
       }
 
-      const generatePlayerIdFromL2 = (): [number, number] | null => {
+      const generatePlayerIdFromL2 = (): [string, string] | null => {
         try {
           if (l2Account.pubkey) {
             const pubkey = l2Account.pubkey;
             const leHexBN = new LeHexBN(bnToHexLe(pubkey));
             const pkeyArray = leHexBN.toU64Array();
-            const playerId: [number, number] = [Number(pkeyArray[1]), Number(pkeyArray[2])];
+            const playerId: [string, string] = [pkeyArray[1].toString(), pkeyArray[2].toString()];
             console.log("Generated player ID from L2 account:", playerId);
+            console.log("Original bigint values:", pkeyArray[1], pkeyArray[2]);
             return playerId;
           }
           return null;

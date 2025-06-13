@@ -9,11 +9,11 @@ interface WalletContextType {
   isL2Connected: boolean;
   l1Account: any;
   l2Account: any;
-  playerId: [number, number] | null;
+  playerId: [string, string] | null;
   connectL1: () => Promise<void>;
   connectL2: () => Promise<void>;
   disconnect: () => void;
-  setPlayerId: (id: [number, number]) => void;
+  setPlayerId: (id: [string, string]) => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -31,7 +31,7 @@ interface WalletProviderProps {
 }
 
 export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
-  const [playerId, setPlayerIdState] = useState<[number, number] | null>(null);
+  const [playerId, setPlayerIdState] = useState<[string, string] | null>(null);
   
   const dispatch = useAppDispatch();
   const l1Account = useAppSelector(AccountSlice.selectL1Account);
@@ -47,9 +47,14 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       console.log("Clearing saved player ID for fresh start");
       localStorage.removeItem('player_id');
       // Don't load the saved player ID for now
-      // const parsed = JSON.parse(savedPlayerId);
-      // console.log("Setting player ID from localStorage:", parsed);
-      // setPlayerIdState(parsed);
+      // try {
+      //   const parsed = JSON.parse(savedPlayerId);
+      //   console.log("Setting player ID from localStorage:", parsed);
+      //   setPlayerIdState(parsed);
+      // } catch (error) {
+      //   console.error("Failed to parse saved player ID:", error);
+      //   localStorage.removeItem('player_id');
+      // }
     }
   }, []);
 
@@ -152,7 +157,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     window.location.reload();
   };
 
-  const setPlayerId = (id: [number, number]) => {
+  const setPlayerId = (id: [string, string]) => {
     setPlayerIdState(id);
     localStorage.setItem('player_id', JSON.stringify(id));
   };

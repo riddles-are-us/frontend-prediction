@@ -80,7 +80,7 @@ class PredictionMarketAPI extends PlayerConvention {
   }
 
   // Deposit funds: DEPOSIT command
-  async depositFunds(playerId: [number, number], amount: string): Promise<any> {
+  async depositFunds(playerId: [string, string], amount: string): Promise<any> {
     let nonce = await this.getNonce();
     const command = createCommand(nonce, BigInt(CommandType.DEPOSIT), [
       BigInt(playerId[0]),
@@ -113,7 +113,7 @@ class PredictionMarketAPI extends PlayerConvention {
   }
 
   // Query player state by player ID  
-  async queryPlayerState(playerId: [number, number]): Promise<any> {
+  async queryPlayerState(playerId: [string, string]): Promise<any> {
     try {
       const response: any = await this.rpc.queryState(this.privkey);
       if (response && response.data) {
