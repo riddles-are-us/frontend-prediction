@@ -3,12 +3,16 @@ import React, { createContext, ReactNode, useCallback, useContext, useEffect, us
 import { LeHexBN } from 'zkwasm-minirollup-rpc';
 import { useToast } from '../hooks/use-toast';
 import PredictionMarketAPI from '../services/api';
-import { MarketData, PlayerData } from '../types/market';
+import { ChartDataPoint, MarketData, MarketHistoryEntry, MarketHistoryResponse, PlayerData, UserHistoryResponse } from '../types/market';
+import { MarketCalculations } from '../utils/market-calculations';
 import { useWallet } from './WalletContext';
 
 interface MarketContextType {
   marketData: MarketData | null;
   playerData: PlayerData | null;
+  chartData: ChartDataPoint[];
+  userHistory: UserHistoryResponse | null;
+  playerId: [string, string] | null;
   isLoading: boolean;
   api: PredictionMarketAPI | null;
   initializeAPI: () => void;
@@ -19,6 +23,8 @@ interface MarketContextType {
   resolveMarket: (outcome: boolean) => Promise<void>;
   withdrawFees: () => Promise<void>;
   refreshData: () => Promise<void>;
+  loadMarketHistory: () => Promise<void>;
+  loadUserHistory: () => Promise<void>;
 }
 
 const MarketContext = createContext<MarketContextType | undefined>(undefined);
@@ -43,6 +49,8 @@ const DEFAULT_CONFIG = {
 export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [playerData, setPlayerData] = useState<PlayerData | null>(null);
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [userHistory, setUserHistory] = useState<UserHistoryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [api, setApi] = useState<PredictionMarketAPI | null>(null);
   const [playerInstalled, setPlayerInstalled] = useState(false);
@@ -323,6 +331,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     try {
       if (api) {
         await refreshData();
+        // Don't load history here, let MarketChart component handle it
       } else {
         // Show loading message until API is ready
         console.log("API not ready yet, will load data when API initializes");
@@ -513,7 +522,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         const stateFromResponse = fullState.state;
         
         // Calculate time information based on counter
-        const currentCounter = stateFromResponse.counter || 0;
+        const currentCounter: number = stateFromResponse.counter || 0;
         const startTime = marketFromResponse.start_time || 0;
         const endTime = marketFromResponse.end_time || 0;
         const counterInterval = 5; // 5 seconds per counter increment
@@ -605,11 +614,109 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     }
   };
 
+  const loadMarketHistory = async () => {
+    if (!api) {
+      console.warn('API not available for market history');
+      return;
+    }
+
+    try {
+      console.log('Loading market history...');
+      
+      // Use current counter from market data, or query current state first
+      let currentCounter: number = marketData?.counter || 0;
+      
+      if (currentCounter === 0) {
+        // If we don't have current counter, try to get it from current state
+        try {
+          if (playerId) {
+            const currentState = await api.queryPlayerState(playerId);
+            currentCounter = currentState?.state?.counter || 100; // fallback to 100
+          } else {
+            currentCounter = 100; // fallback if no player ID
+          }
+        } catch (error) {
+          console.warn('Failed to get current counter, using fallback:', error);
+          currentCounter = 100;
+        }
+      }
+      
+      console.log('Loading market history up to counter:', currentCounter);
+      
+      // Load history up to the current counter
+      const historyResponse: MarketHistoryResponse = await api.queryMarketHistory(currentCounter);
+      
+      if (historyResponse.success && historyResponse.data) {
+        console.log('Market history loaded:', historyResponse.data.length, 'entries');
+        
+        // Convert to chart data format and calculate prices
+        const chartPoints: ChartDataPoint[] = historyResponse.data.map((entry: MarketHistoryEntry) => {
+          const yesLiq = parseFloat(entry.yesLiquidity);
+          const noLiq = parseFloat(entry.noLiquidity);
+          const yesLiqBig = BigInt(Math.floor(yesLiq));
+          const noLiqBig = BigInt(Math.floor(noLiq));
+          
+          // Use MarketCalculations for consistent price calculation
+          const prices = MarketCalculations.calculatePrices(yesLiqBig, noLiqBig);
+          
+          return {
+            counter: parseInt(entry.counter),
+            yesPrice: prices.yesPrice,
+            noPrice: prices.noPrice,
+            yesLiquidity: yesLiq,
+            noLiquidity: noLiq,
+            timestamp: new Date().toISOString(), // You might want to calculate actual timestamp based on counter
+          };
+        });
+        
+        // Sort by counter and keep only the last 100 entries for chart performance
+        chartPoints.sort((a, b) => a.counter - b.counter);
+        const last100Points = chartPoints.slice(-100);
+        
+        setChartData(last100Points);
+        console.log('Chart data updated with', last100Points.length, 'points (last 100 for performance)');
+      }
+    } catch (error) {
+      console.error('Failed to load market history:', error);
+    }
+  };
+
+  const loadUserHistory = async () => {
+    if (!api || !playerId) {
+      console.warn('API or player ID not available for user history');
+      return;
+    }
+
+    try {
+      console.log('Loading user history for player:', playerId);
+      
+      const historyResponse: UserHistoryResponse = await api.queryUserHistory(playerId);
+      
+      if (historyResponse.success) {
+        console.log('User history loaded:', historyResponse.count, 'transactions');
+        
+        // Keep only the last 10 transactions
+        const last10Transactions = {
+          ...historyResponse,
+          data: historyResponse.data.slice(-10).reverse(), // Reverse to show most recent first
+        };
+        
+        setUserHistory(last10Transactions);
+        console.log('User history updated with', last10Transactions.data.length, 'recent transactions');
+      }
+    } catch (error) {
+      console.error('Failed to load user history:', error);
+    }
+  };
+
   return (
     <MarketContext.Provider 
       value={{
         marketData,
         playerData,
+        chartData,
+        userHistory,
+        playerId,
         isLoading,
         api,
         initializeAPI,
@@ -619,7 +726,9 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         claimWinnings,
         resolveMarket,
         withdrawFees,
-        refreshData
+        refreshData,
+        loadMarketHistory,
+        loadUserHistory
       }}
     >
       {children}

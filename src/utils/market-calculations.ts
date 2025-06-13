@@ -1,6 +1,5 @@
-
 // AMM calculation utilities for the prediction market
-import { MarketPrices, MarketImpact } from '../types/market';
+import { MarketImpact, MarketPrices } from '../types/market';
 
 export class MarketCalculations {
   // Constants from the Rust backend
@@ -142,7 +141,7 @@ export class MarketCalculations {
 
   // Calculate fees for a transaction
   static calculateFees(amount: number): number {
-    return Math.floor(amount * this.FEE_RATE / this.PRECISION);
+    return Math.ceil(amount * this.FEE_RATE / this.PRECISION);
   }
 
   // Format price as percentage

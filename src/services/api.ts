@@ -141,6 +141,28 @@ class PredictionMarketAPI extends PlayerConvention {
       throw error;
     }
   }
+
+  // Query market liquidity history for the last N counters
+  async queryMarketHistory(upToCounter: number): Promise<any> {
+    try {
+      const response: any = await this.rpc.queryData(`market/${upToCounter}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to query market history:', error);
+      throw error;
+    }
+  }
+
+  // Query user transaction history
+  async queryUserHistory(playerId: [string, string]): Promise<any> {
+    try {
+      const response: any = await this.rpc.queryData(`history/${playerId[0]}/${playerId[1]}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to query user history:', error);
+      throw error;
+    }
+  }
 }
 
 export default PredictionMarketAPI; 

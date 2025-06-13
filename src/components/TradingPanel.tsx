@@ -49,6 +49,12 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
   const sellAmount = sellSharesNum > 0 ? 
     MarketCalculations.calculateAmountForShares(betType, sellSharesNum, yesLiquidity, noLiquidity) : 0;
 
+  // Calculate fees for selling (1% of the gross amount)
+  const sellFees = sellAmount > 0 ? MarketCalculations.calculateFees(sellAmount) : 0;
+  
+  // Net amount after deducting fees
+  const sellAmountAfterFees = sellAmount - sellFees;
+
   const buyImpact = amountAfterFees > 0 ? 
     MarketCalculations.calculateMarketImpact(betType, amountAfterFees, yesLiquidity, noLiquidity) : null;
 
@@ -127,7 +133,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
       setSellShares('');
       toast({
         title: "Sell Order Submitted",
-        description: `Selling ${sellSharesNum} ${selectedPosition} shares`,
+        description: `Selling ${sellSharesNum} ${selectedPosition} shares for ${sellAmountAfterFees.toFixed(2)} tokens (${sellAmount.toFixed(2)} - ${sellFees.toFixed(2)} fee)`,
       });
     } catch (error) {
       toast({
@@ -326,14 +332,23 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                   <span className="font-medium">{sellSharesNum}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Amount Received:</span>
+                  <span>Gross Amount:</span>
                   <span className="font-medium">{sellAmount.toFixed(2)} tokens</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Platform Fee (1%):</span>
+                  <span className="font-medium">{sellFees.toFixed(2)} tokens</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Effective Price:</span>
                   <span className="font-medium">
-                    {MarketCalculations.formatPrice(sellAmount / sellSharesNum)}
+                    {MarketCalculations.formatPrice(sellAmountAfterFees / sellSharesNum)}
                   </span>
+                </div>
+                <Separator />
+                <div className="flex justify-between font-semibold">
+                  <span>Amount Received:</span>
+                  <span>{sellAmountAfterFees.toFixed(2)} tokens</span>
                 </div>
               </div>
             )}

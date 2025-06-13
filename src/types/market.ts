@@ -1,4 +1,3 @@
-
 // Market and AMM types for the prediction market
 export interface MarketData {
   title: string;
@@ -88,4 +87,43 @@ export enum CommandType {
   RESOLVE = 6,
   CLAIM = 7,
   WITHDRAW_FEES = 8
+}
+
+// Historical data types
+export interface MarketHistoryEntry {
+  counter: string;
+  __v: number;
+  noLiquidity: string;
+  yesLiquidity: string;
+}
+
+export interface MarketHistoryResponse {
+  success: boolean;
+  data: MarketHistoryEntry[];
+}
+
+export interface UserTransactionEntry {
+  index: string;
+  pid: [string, string];
+  betType: number;
+  amount: string;
+  shares: string;
+  counter: string;
+  __v: number;
+}
+
+export interface UserHistoryResponse {
+  success: boolean;
+  data: UserTransactionEntry[];
+  count: number;
+}
+
+// Chart data types for visualization
+export interface ChartDataPoint {
+  counter: number;
+  yesPrice: number;
+  noPrice: number;
+  yesLiquidity: number;
+  noLiquidity: number;
+  timestamp?: string;
 }

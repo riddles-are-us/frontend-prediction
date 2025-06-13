@@ -4,6 +4,7 @@ import MarketChart from '../components/MarketChart';
 import MarketHeader from '../components/MarketHeader';
 import PortfolioPanel from '../components/PortfolioPanel';
 import TradingPanel from '../components/TradingPanel';
+import UserHistory from '../components/UserHistory';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
@@ -423,9 +424,10 @@ const Index = () => {
           {/* Right Column - Trading/Portfolio */}
           <div className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="trade">Trade</TabsTrigger>
                 <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
               </TabsList>
               
               <TabsContent value="trade" className="space-y-4">
@@ -464,6 +466,10 @@ const Index = () => {
                     </div>
                   </Card>
                 )}
+              </TabsContent>
+
+              <TabsContent value="history" className="space-y-4">
+                <UserHistory />
               </TabsContent>
             </Tabs>
           </div>

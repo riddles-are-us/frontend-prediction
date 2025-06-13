@@ -294,11 +294,11 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
         )}
 
         {/* Fund Management */}
-        <>
-          <Separator />
+          <>
+            <Separator />
           <div className="space-y-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
+              <h3 className="font-semibold flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
               Fund Management
             </h3>
             
@@ -374,7 +374,7 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                       <Minus className="h-5 w-5" />
-                      Withdraw Funds
+                Withdraw Funds
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
@@ -436,22 +436,22 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                       >
                         Cancel
                       </Button>
-                      <Button
+              <Button
                         onClick={handleWithdraw}
                         disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > balance}
-                        variant="outline"
+                variant="outline"
                         className="flex-1"
-                      >
+              >
                         <Minus className="h-4 w-4 mr-2" />
                         Withdraw {withdrawAmount ? `${withdrawAmount}` : 'Funds'}
-                      </Button>
+              </Button>
                     </div>
                   </div>
                 </DialogContent>
               </Dialog>
             </div>
-          </div>
-        </>
+            </div>
+          </>
       </CardContent>
     </Card>
   );
