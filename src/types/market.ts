@@ -127,3 +127,14 @@ export interface ChartDataPoint {
   noLiquidity: number;
   timestamp?: string;
 }
+
+export interface TransactionData {
+  index: string;
+  pid: string[];
+  betType: number;
+  amount: string;
+  shares: string;
+  counter: string;
+  transactionType: 'BET_YES' | 'BET_NO' | 'SELL_YES' | 'SELL_NO';
+  originalBetType: number;
+}

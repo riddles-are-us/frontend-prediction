@@ -1,5 +1,5 @@
 import { createCommand, PlayerConvention, ZKWasmAppRpc } from 'zkwasm-minirollup-rpc';
-import { CommandType } from "../types/market";
+import { CommandType, TransactionData } from "../types/market";
 
 interface ServerConfig {
   serverUrl: string;
@@ -160,6 +160,21 @@ class PredictionMarketAPI extends PlayerConvention {
       return response;
     } catch (error) {
       console.error('Failed to query user history:', error);
+      throw error;
+    }
+  }
+
+  // Get recent transactions
+  async getRecentTransactions(count: number = 20): Promise<TransactionData[]> {
+    try {
+      const response = await this.rpc.queryData(`recent/${count}`);
+      const result = response as any;
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to get recent transactions');
+      }  
+      return result.data;
+    } catch (error) {
+      console.error('Failed to get recent transactions:', error);
       throw error;
     }
   }

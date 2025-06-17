@@ -42,13 +42,13 @@ interface MarketProviderProps {
 }
 
 // Default server configuration
-const DEFAULT_CONFIG = {
-  serverUrl: "https://rpc.btcprediction.zkwasm.ai", // RPC server URL
-};
-
 // const DEFAULT_CONFIG = {
-//   serverUrl: "http://localhost:3000"
+//   serverUrl: "https://rpc.btcprediction.zkwasm.ai", // RPC server URL
 // };
+
+const DEFAULT_CONFIG = {
+  serverUrl: "http://localhost:3000"
+};
 
 export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   const [marketData, setMarketData] = useState<MarketData | null>(null);

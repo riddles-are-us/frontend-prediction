@@ -3,6 +3,7 @@ import AdminPanel from '../components/AdminPanel';
 import MarketChart from '../components/MarketChart';
 import MarketHeader from '../components/MarketHeader';
 import PortfolioPanel from '../components/PortfolioPanel';
+import RecentTransactions from '../components/RecentTransactions';
 import TradingPanel from '../components/TradingPanel';
 import UserHistory from '../components/UserHistory';
 import { Badge } from '../components/ui/badge';
@@ -408,8 +409,9 @@ const Index = () => {
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Chart */}
-          <div className="lg:col-span-2">
+          {/* Left Column - Chart and Recent Transactions */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Chart */}
             {marketData ? (
               <MarketChart market={marketData} />
             ) : (
@@ -419,6 +421,9 @@ const Index = () => {
                 </div>
               </Card>
             )}
+
+            {/* Recent Transactions */}
+            <RecentTransactions />
           </div>
 
           {/* Right Column - Trading/Portfolio */}
