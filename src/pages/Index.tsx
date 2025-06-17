@@ -267,13 +267,19 @@ const Index = () => {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="gradient-card market-glow p-8 max-w-md w-full text-center animate-fade-in">
           <div className="space-y-6">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-bitcoin-500 to-bull-500 bg-clip-text text-transparent">
-                zkWasm Prediction Market
-              </h1>
-              <p className="text-muted-foreground">
-                Decentralized AMM-based prediction market powered by zkWasm
-              </p>
+            {/* Landing Page Image */}
+            <div className="flex justify-center">
+              <img 
+                src="/landing-hero.png" 
+                alt="zkWasm Prediction Market"
+                className="w-full max-w-sm h-auto rounded-lg"
+                style={{ aspectRatio: '16/9' }}
+                onError={(e) => {
+                  // Fallback to placeholder if image not found
+                  e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgdmlld0JveD0iMCAwIDQwMCAyMjUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjI1IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMjAgMTEyLjVMMTYwIDcyLjVMMjAwIDExMi41TDI0MCA3Mi41TDI4MCAxMTIuNUwyODAgMTUyLjVMMjQwIDE1Mi41TDIwMCAxMTIuNUwxNjAgMTUyLjVMMTIwIDE1Mi41TDEyMCAxMTIuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHR4dCB4PSIyMDAiIHk9IjE4NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjU3Mzg0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5MYW5kaW5nIEhlcm8gSW1hZ2U8L3RleHQ+CjwvcnZnPgo=';
+                  e.currentTarget.alt = 'Landing Hero Image Placeholder';
+                }}
+              />
             </div>
             
             <div className="space-y-4">
@@ -358,24 +364,38 @@ const Index = () => {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-bitcoin-500 to-bull-500 bg-clip-text text-transparent">
-              zkWasm Prediction Market
-            </h1>
-            <Badge variant="outline" className="border-bull-500 text-bull-600">
-              Connected
-            </Badge>
-            {l2Account && (
-              <Badge variant="outline" className="border-green-500 text-green-600">
-                L2: {l2Account.toHexStr ? `${l2Account.toHexStr().slice(0, 6)}...${l2Account.toHexStr().slice(-4)}` : 'Connected'}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            {/* Header Banner Image */}
+            <img 
+              src="/header-banner.png" 
+              alt="zkWasm Prediction Market"
+              className="h-6 sm:h-8 w-auto max-w-[200px] sm:max-w-[300px]"
+              onError={(e) => {
+                // Fallback to placeholder if image not found
+                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0IiB2aWV3Qm94PSIwIDAgMjAwIDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iI0YzRjRGNiIvPgo8cGF0aCBkPSJNNiA2SDE4QzE5LjEwNDYgNiAyMCA2Ljg5NTQzIDIwIDhWMTZDMjAgMTcuMTA0NiAxOS4xMDQ2IDE4IDE4IDE4SDZDNC44OTU0MyAxOCA0IDE3LjEwNDYgNCAxNlY4QzQgNi44OTU0MyA0Ljg5NTQzIDYgNiA2WiIgZmlsbD0iIzlDQTNBRiIvPgo8dGV4dCB4PSIxMDAiIHk9IjE0IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM2NTczODQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkhlYWRlciBCYW5uZXI8L3RleHQ+Cjwvc3ZnPgo=';
+                e.currentTarget.alt = 'Header Banner Placeholder';
+              }}
+            />
+            
+            {/* Status Badges */}
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="border-bull-500 text-bull-600">
+                Connected
               </Badge>
-            )}
-            {isLoading && (
-              <Badge variant="outline" className="border-yellow-500 text-yellow-600">
-                Installing Player...
-              </Badge>
-            )}
+              {l2Account && (
+                <Badge variant="outline" className="border-green-500 text-green-600">
+                  <span className="hidden sm:inline">L2: </span>
+                  {l2Account.toHexStr ? `${l2Account.toHexStr().slice(0, 6)}...${l2Account.toHexStr().slice(-4)}` : 'Connected'}
+                </Badge>
+              )}
+              {isLoading && (
+                <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                  <span className="hidden sm:inline">Installing Player...</span>
+                  <span className="sm:hidden">Installing...</span>
+                </Badge>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center gap-2">
@@ -383,6 +403,7 @@ const Index = () => {
               variant="outline"
               size="sm"
               onClick={() => setIsAdmin(!isAdmin)}
+              className="text-xs sm:text-sm"
             >
               {isAdmin ? "Exit Admin" : "Admin Mode"}
             </Button>
@@ -390,6 +411,7 @@ const Index = () => {
               variant="outline"
               size="sm"
               onClick={disconnect}
+              className="text-xs sm:text-sm"
             >
               Disconnect
             </Button>
