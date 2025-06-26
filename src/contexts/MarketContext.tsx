@@ -627,22 +627,32 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       }
 
       // Transform player data from the response structure
-      if (playerResponse) {
+      if (playerResponse && globalStateResponse) {
         const playerFromResponse = playerResponse;
+        const globalPlayerData = globalStateResponse.player;
+        
         const parsedPlayerData: PlayerData = {
           player_id: [parseInt(playerId[0]), parseInt(playerId[1])],
           data: {
-            balance: "0", // Balance not provided in market position response
+            balance: globalPlayerData?.data?.balance?.toString() || "0", // Balance from global state
             yes_shares: playerFromResponse.yesShares?.toString() || "0",
             no_shares: playerFromResponse.noShares?.toString() || "0",
             claimed: playerFromResponse.claimed || false,
-            nonce: "0", // Nonce not provided in market position response
+            nonce: globalPlayerData?.nonce?.toString() || "0", // Nonce from global state
           },
         };
-        console.log('Parsed player data:', parsedPlayerData);
+        console.log('Parsed player data (balance from global state):', {
+          globalBalance: globalPlayerData?.data?.balance,
+          marketPosition: {
+            yesShares: playerFromResponse.yesShares,
+            noShares: playerFromResponse.noShares,
+            claimed: playerFromResponse.claimed
+          },
+          finalPlayerData: parsedPlayerData
+        });
         setPlayerData(parsedPlayerData);
       } else {
-        console.log('No player data received from API');
+        console.log('No player data or global state received from API');
       }
     } catch (error) {
       console.error('Failed to refresh data from API:', error);
