@@ -27,8 +27,8 @@ const MarketList = () => {
   useEffect(() => {
     try {
       const config = {
-        serverUrl: "http://localhost:3000", // Use the same server URL
-        privkey: "0000000000000000000000000000000000000000000000000000000000000000" // Dummy private key for read-only operations
+        serverUrl: "https://rpc.btcprediction.zkwasm.ai", //"http://localhost:3000", // Use the same server URL
+        privkey: "00000000" // Dummy private key for read-only operations
       };
       const apiInstance = new PredictionMarketAPI(config);
       setApi(apiInstance);
