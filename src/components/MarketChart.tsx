@@ -11,25 +11,27 @@ interface MarketChartProps {
 }
 
 const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
-  const { chartData, loadMarketHistory } = useMarket();
+  const { chartData, loadMarketHistory, globalState } = useMarket();
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [lastLoadedCounter, setLastLoadedCounter] = useState<number>(0);
 
-  // Load market history when component mounts or when counter changes
+  // Load market history when component mounts or when global counter changes
   useEffect(() => {
-    if (market && market.counter) {
-      const currentCounter = market.counter;
+    if (globalState && globalState.counter !== undefined) {
+      const currentCounter = globalState.counter;
       // Load history if:
-      // 1. First time loading (lastLoadedCounter === 0)
+      // 1. First time loading (lastLoadedCounter === 0 and currentCounter >= 0)
       // 2. Counter has changed (update chart every counter change)
       if (lastLoadedCounter === 0 || currentCounter !== lastLoadedCounter) {
-        console.log(`Loading market history for counter ${currentCounter} (last loaded: ${lastLoadedCounter})`);
+        console.log(`Loading market history for global counter ${currentCounter} (last loaded: ${lastLoadedCounter})`);
         loadMarketHistory().then(() => {
           setLastLoadedCounter(currentCounter);
+        }).catch((error) => {
+          console.error('Failed to load market history:', error);
         });
       }
     }
-  }, [market?.counter]); // Only depend on counter, not loadMarketHistory
+  }, [globalState?.counter]); // Only depend on global counter, not loadMarketHistory
 
   // Update current time every minute to refresh chart timestamps
   useEffect(() => {
@@ -42,7 +44,10 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
 
   // Transform chart data for recharts format
   const transformedChartData = useMemo(() => {
+    console.log('MarketChart - transformedChartData: chartData length =', chartData?.length || 0);
+    
     if (!chartData || chartData.length === 0) {
+      console.log('MarketChart - Using fallback to current market prices');
       // Fallback to current market prices if no historical data
       const yesLiquidity = BigInt(market.yes_liquidity || 0);
       const noLiquidity = BigInt(market.no_liquidity || 0);
@@ -54,7 +59,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           minute: '2-digit',
           hour12: false 
         }),
-        counter: market.counter || 0,
+        counter: globalState?.counter || 0,
         yesPrice: prices.yesPrice * 100,
         noPrice: prices.noPrice * 100,
         fullTime: new Date().toLocaleString('en-US', {
@@ -67,11 +72,13 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
       }];
     }
 
+    console.log('MarketChart - Using historical chart data with', chartData.length, 'points');
+    
     return chartData.map((point) => {
       // Calculate approximate timestamp based on counter
       // Assuming each counter represents 5 seconds
       const counterInterval = 5; // seconds
-      const approximateTimestamp = Date.now() - ((market.counter || 0) - point.counter) * counterInterval * 1000;
+      const approximateTimestamp = Date.now() - ((globalState?.counter || 0) - point.counter) * counterInterval * 1000;
       
       return {
         time: new Date(approximateTimestamp).toLocaleTimeString('en-US', { 
@@ -95,11 +102,11 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
 
   // Calculate trend indicators based on current and previous counter prices
   const calculatePriceTrends = useMemo(() => {
-    if (!chartData || chartData.length < 2 || !market?.counter) {
+    if (!chartData || chartData.length < 2 || !globalState?.counter) {
       return { yesTrend: 0, noTrend: 0 };
     }
 
-    const currentCounter = market.counter;
+    const currentCounter = globalState.counter;
     
     // Find the current counter's price data
     const currentData = chartData.find(point => point.counter === currentCounter);
@@ -124,7 +131,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
       yesTrend: (currentData.yesPrice * 100) - (previousData.yesPrice * 100),
       noTrend: (currentData.noPrice * 100) - (previousData.noPrice * 100)
     };
-  }, [chartData, market?.counter]);
+  }, [chartData, globalState?.counter]);
 
   const { yesTrend, noTrend } = calculatePriceTrends;
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import AdminPanel from '../components/AdminPanel';
 import MarketChart from '../components/MarketChart';
 import MarketHeader from '../components/MarketHeader';
@@ -15,6 +16,7 @@ import { useWallet } from '../contexts/WalletContext';
 import { useToast } from '../hooks/use-toast';
 
 const Index = () => {
+  const { marketId } = useParams<{ marketId: string }>();
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState("trade");
   const { toast } = useToast();
@@ -270,14 +272,19 @@ const Index = () => {
             {/* Landing Page Image */}
             <div className="flex justify-center">
               <img 
-                src="/landing-hero.png" 
+                src={`/landing-hero-${marketId || 'default'}.png`}
                 alt="zkWasm Prediction Market"
                 className="w-full max-w-sm h-auto rounded-lg"
                 style={{ aspectRatio: '16/9' }}
                 onError={(e) => {
-                  // Fallback to placeholder if image not found
-                  e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgdmlld0JveD0iMCAwIDQwMCAyMjUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjI1IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMjAgMTEyLjVMMTYwIDcyLjVMMjAwIDExMi41TDI0MCA3Mi41TDI4MCAxMTIuNUwyODAgMTUyLjVMMjQwIDE1Mi41TDIwMCAxMTIuNUwxNjAgMTUyLjVMMTIwIDE1Mi41TDEyMCAxMTIuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHR4dCB4PSIyMDAiIHk9IjE4NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjU3Mzg0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5MYW5kaW5nIEhlcm8gSW1hZ2U8L3RleHQ+CjwvcnZnPgo=';
-                  e.currentTarget.alt = 'Landing Hero Image Placeholder';
+                  // Try generic fallback first
+                  if (e.currentTarget.src.includes(`landing-hero-${marketId}`)) {
+                    e.currentTarget.src = '/landing-hero.png';
+                  } else if (e.currentTarget.src.includes('landing-hero.png')) {
+                    // Final fallback to placeholder
+                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgdmlld0JveD0iMCAwIDQwMCAyMjUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjI1IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMjAgMTEyLjVMMTYwIDcyLjVMMjAwIDExMi41TDI0MCA3Mi41TDI4MCAxMTIuNUwyODAgMTUyLjVMMjQwIDE1Mi41TDIwMCAxMTIuNUwxNjAgMTUyLjVMMTIwIDE1Mi41TDEyMCAxMTIuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHR4dCB4PSIyMDAiIHk9IjE4NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjU3Mzg0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5MYW5kaW5nIEhlcm8gSW1hZ2U8L3RleHQ+Cjwvc3ZnPgo=';
+                    e.currentTarget.alt = 'Landing Hero Image Placeholder';
+                  }
                 }}
               />
             </div>
@@ -368,13 +375,18 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             {/* Header Banner Image */}
             <img 
-              src="/header-banner.png" 
+              src={`/header-banner-${marketId || 'default'}.png`}
               alt="zkWasm Prediction Market"
               className="h-6 sm:h-8 w-auto max-w-[200px] sm:max-w-[300px]"
               onError={(e) => {
-                // Fallback to placeholder if image not found
-                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0IiB2aWV3Qm94PSIwIDAgMjAwIDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iI0YzRjRGNiIvPgo8cGF0aCBkPSJNNiA2SDE4QzE5LjEwNDYgNiAyMCA2Ljg5NTQzIDIwIDhWMTZDMjAgMTcuMTA0NiAxOS4xMDQ2IDE4IDE4IDE4SDZDNC44OTU0MyAxOCA0IDE3LjEwNDYgNCAxNlY4QzQgNi44OTU0MyA0Ljg5NTQzIDYgNiA2WiIgZmlsbD0iIzlDQTNBRiIvPgo8dGV4dCB4PSIxMDAiIHk9IjE0IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM2NTczODQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkhlYWRlciBCYW5uZXI8L3RleHQ+Cjwvc3ZnPgo=';
-                e.currentTarget.alt = 'Header Banner Placeholder';
+                // Try generic fallback first
+                if (e.currentTarget.src.includes(`header-banner-${marketId}`)) {
+                  e.currentTarget.src = '/header-banner.png';
+                } else if (e.currentTarget.src.includes('header-banner.png')) {
+                  // Final fallback to placeholder
+                  e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0IiB2aWV3Qm94PSIwIDAgMjAwIDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iI0YzRjRGNiIvPgo8cGF0aCBkPSJNNiA2SDE4QzE5LjEwNDYgNiAyMCA2Ljg5NTQzIDIwIDhWMTZDMjAgMTcuMTA0NiAxOS4xMDQ2IDE4IDE4IDE4SDZDNC44OTU0MyAxOCA0IDE3LjEwNDYgNCAxNlY4QzQgNi44OTU0MyA0Ljg5NTQzIDYgNiA2WiIgZmlsbD0iIzlDQTNBRiIvPgo8dGV4dCB4PSIxMDAiIHk9IjE0IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM2NTczODQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkhlYWRlciBCYW5uZXI8L3RleHQ+Cjwvc3ZnPgo=';
+                  e.currentTarget.alt = 'Header Banner Placeholder';
+                }
               }}
             />
             

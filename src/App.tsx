@@ -8,6 +8,7 @@ import { TooltipProvider } from "./components/ui/tooltip";
 import { MarketProvider } from "./contexts/MarketContext";
 import { WalletProvider } from "./contexts/WalletContext";
 import Index from "./pages/Index";
+import MarketList from "./pages/MarketList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -16,19 +17,22 @@ const App = () => (
   <Provider store={store}>
     <QueryClientProvider client={queryClient}>
       <WalletProvider>
-        <MarketProvider>
+        <BrowserRouter>
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
+            <Routes>
+              <Route path="/" element={<MarketList />} />
+              <Route path="/:marketId" element={
+                <MarketProvider>
+                  <Index />
+                </MarketProvider>
+              } />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </TooltipProvider>
-        </MarketProvider>
+        </BrowserRouter>
       </WalletProvider>
     </QueryClientProvider>
   </Provider>

@@ -164,6 +164,36 @@ class PredictionMarketAPI extends PlayerConvention {
     }
   }
 
+  // Get player recent transactions across all markets
+  async getPlayerRecentTransactions(playerId1: string, playerId2: string, count: number = 20): Promise<any[]> {
+    try {
+      const response = await this.rpc.queryData(`player/${playerId1}/${playerId2}/recent`);
+      const result = response as any;
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to get player transactions');
+      }
+      return result.data;
+    } catch (error) {
+      console.error('Failed to get player recent transactions:', error);
+      throw error;
+    }
+  }
+
+  // Get player recent transactions for specific market
+  async getPlayerMarketRecentTransactions(playerId1: string, playerId2: string, marketId: string, count: number = 20): Promise<any[]> {
+    try {
+      const response = await this.rpc.queryData(`player/${playerId1}/${playerId2}/market/${marketId}/recent`);
+      const result = response as any;
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to get player market transactions');
+      }
+      return result.data;
+    } catch (error) {
+      console.error('Failed to get player market recent transactions:', error);
+      throw error;
+    }
+  }
+
   // Get recent transactions
   async getRecentTransactions(count: number = 20): Promise<TransactionData[]> {
     try {
@@ -177,6 +207,114 @@ class PredictionMarketAPI extends PlayerConvention {
       console.error('Failed to get recent transactions:', error);
       throw error;
     }
+  }
+
+  // === Multi-Market API Methods ===
+  
+  // Get all markets
+  async getAllMarkets(): Promise<any[]> {
+    try {
+      const response = await this.rpc.queryData('markets');
+      const result = response as any;
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to get markets');
+      }
+      return result.data;
+    } catch (error) {
+      console.error('Failed to get all markets:', error);
+      throw error;
+    }
+  }
+
+  // Get specific market details
+  async getMarket(marketId: string): Promise<any> {
+    try {
+      const response = await this.rpc.queryData(`market/${marketId}`);
+      const result = response as any;
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to get market');
+      }
+      return result.data;
+    } catch (error) {
+      console.error('Failed to get market:', error);
+      throw error;
+    }
+  }
+
+  // Get recent transactions for specific market
+  async getMarketRecentTransactions(marketId: string, count: number = 20): Promise<TransactionData[]> {
+    try {
+      const response = await this.rpc.queryData(`market/${marketId}/recent`);
+      const result = response as any;
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to get market transactions');
+      }
+      return result.data;
+    } catch (error) {
+      console.error('Failed to get market recent transactions:', error);
+      throw error;
+    }
+  }
+
+  // Get player position in specific market
+  async getPlayerMarketPosition(playerId1: string, playerId2: string, marketId: string): Promise<any> {
+    try {
+      const response = await this.rpc.queryData(`player/${playerId1}/${playerId2}/market/${marketId}`);
+      const result = response as any;
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to get player position');
+      }
+      return result.data;
+    } catch (error) {
+      console.error('Failed to get player market position:', error);
+      throw error;
+    }
+  }
+
+  // Get market liquidity history for recent 100 counters (only liquidity data)
+  async getMarketLiquidityHistory(marketId: string): Promise<any[]> {
+    try {
+      const response = await this.rpc.queryData(`market/${marketId}/liquidity`);
+      const result = response as any;
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to get market liquidity history');
+      }
+      return result.data;
+    } catch (error) {
+      console.error('Failed to get market liquidity history:', error);
+      throw error;
+    }
+  }
+
+  // === Market-specific transaction methods (updated to include marketId) ===
+  
+  // Place a bet on specific market: BET command
+  async placeBetOnMarket(marketId: string, betType: number, amount: string): Promise<any> {
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.BET), [
+      BigInt(marketId), 
+      BigInt(betType), 
+      BigInt(amount)
+    ]);
+    return await this.sendTransactionWithCommand(command);
+  }
+
+  // Sell shares on specific market: SELL command
+  async sellSharesOnMarket(marketId: string, betType: number, amount: string): Promise<any> {
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.SELL), [
+      BigInt(marketId), 
+      BigInt(betType), 
+      BigInt(amount)
+    ]);
+    return await this.sendTransactionWithCommand(command);
+  }
+
+  // Claim winnings from specific market: CLAIM command
+  async claimWinningsFromMarket(marketId: string): Promise<any> {
+    let nonce = await this.getNonce();
+    const command = createCommand(nonce, BigInt(CommandType.CLAIM), [BigInt(marketId)]);
+    return await this.sendTransactionWithCommand(command);
   }
 }
 

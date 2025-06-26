@@ -1,6 +1,6 @@
 // Market and AMM types for the prediction market
 export interface MarketData {
-  title: string;
+  titleString: string;
   yes_liquidity: string;
   no_liquidity: string;
   total_volume: string;

@@ -99,7 +99,7 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-              {market.title}
+              {market.titleString}
             </h1>
             <Badge 
               variant={market.resolved ? "destructive" : "default"}
@@ -108,9 +108,6 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
               {market.resolved ? "Resolved" : "Active"}
             </Badge>
           </div>
-          <p className="text-muted-foreground text-lg">
-            Will Bitcoin reach $100,000 USD by December 31, 2024?
-          </p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">

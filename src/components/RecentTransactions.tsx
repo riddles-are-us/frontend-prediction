@@ -10,17 +10,28 @@ const RecentTransactions = () => {
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { api, marketData } = useMarket();
+  const { api, globalState } = useMarket();
 
   const fetchTransactions = async () => {
-    if (!api) return;
+    if (!api) {
+      console.log('API not ready yet');
+      return;
+    }
     
     try {
       setLoading(true);
       setError(null);
-      const recentTransactions = await api.getRecentTransactions(20);
-      console.log("Recent 20 transactions:", recentTransactions);
-      setTransactions(recentTransactions);
+      // Use market ID from the context - get it from URL or market data
+      const marketIdFromUrl = window.location.pathname.split('/')[1];
+      if (marketIdFromUrl) {
+        console.log('Fetching transactions for market:', marketIdFromUrl);
+        const recentTransactions = await api.getMarketRecentTransactions(marketIdFromUrl);
+        console.log("Recent 20 transactions for market:", marketIdFromUrl, recentTransactions);
+        setTransactions(recentTransactions || []);
+      } else {
+        console.log('No market ID found in URL');
+        setError('No market ID found in URL');
+      }
     } catch (err) {
       console.error('Failed to fetch recent transactions:', err);
       setError(err instanceof Error ? err.message : 'Failed to load transactions');
@@ -29,10 +40,19 @@ const RecentTransactions = () => {
     }
   };
 
-  // Fetch transactions when API is ready or market data counter changes
+  // Fetch transactions when API is ready
   useEffect(() => {
-    fetchTransactions();
-  }, [api, marketData?.counter]);
+    if (api) {
+      fetchTransactions();
+    }
+  }, [api]);
+
+  // Also fetch when global counter changes (for real-time updates)
+  useEffect(() => {
+    if (api && globalState?.counter !== undefined) {
+      fetchTransactions();
+    }
+  }, [globalState?.counter]);
 
   const getTransactionTypeLabel = (transactionType: string) => {
     switch (transactionType) {

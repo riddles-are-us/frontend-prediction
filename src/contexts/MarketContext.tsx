@@ -1,18 +1,30 @@
 import { bnToHexLe } from 'delphinus-curves/src/altjubjub';
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { LeHexBN } from 'zkwasm-minirollup-rpc';
 import { useToast } from '../hooks/use-toast';
 import PredictionMarketAPI from '../services/api';
-import { ChartDataPoint, MarketData, MarketHistoryEntry, MarketHistoryResponse, PlayerData, UserHistoryResponse } from '../types/market';
+import { ChartDataPoint, MarketData, PlayerData, UserHistoryResponse } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
 import { useWallet } from './WalletContext';
 
+interface GlobalState {
+  counter: number;
+  market_ids: number[];
+  next_market_id: number;
+  total_players: number;
+  txsize: number;
+  txcounter: number;
+}
+
 interface MarketContextType {
+  marketId: string | null;
   marketData: MarketData | null;
   playerData: PlayerData | null;
   chartData: ChartDataPoint[];
   userHistory: UserHistoryResponse | null;
   playerId: [string, string] | null;
+  globalState: GlobalState | null;
   isLoading: boolean;
   api: PredictionMarketAPI | null;
   initializeAPI: () => void;
@@ -51,10 +63,12 @@ const DEFAULT_CONFIG = {
 };
 
 export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
+  const { marketId } = useParams<{ marketId: string }>();
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [playerData, setPlayerData] = useState<PlayerData | null>(null);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [userHistory, setUserHistory] = useState<UserHistoryResponse | null>(null);
+  const [globalState, setGlobalState] = useState<GlobalState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [api, setApi] = useState<PredictionMarketAPI | null>(null);
   const [playerInstalled, setPlayerInstalled] = useState(false);
@@ -64,6 +78,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   const { toast } = useToast();
 
   console.log("MarketProvider render:", {
+    marketId,
     l1Account: !!l1Account,
     l2Account: !!l2Account,
     playerId,
@@ -165,10 +180,10 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     }
   }, [l2Account, playerInstalled, api]);
 
-  // Set up polling when API is ready and player is installed
+  // Set up polling when API is ready, player is installed, and marketId is available
   useEffect(() => {
-    if (api && playerInstalled && playerId) {
-      console.log("Player installed, starting data polling...");
+    if (api && playerInstalled && playerId && marketId) {
+      console.log("Player installed and market selected, starting data polling...");
       // Load initial data
       loadInitialData();
       
@@ -181,7 +196,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         clearInterval(pollInterval);
       };
     }
-  }, [api, playerInstalled, playerId]);
+  }, [api, playerInstalled, playerId, marketId]);
 
   const initializeAPI = () => {
     if (!l2Account?.getPrivateKey()) {
@@ -335,7 +350,8 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     try {
       if (api) {
         await refreshData();
-        // Don't load history here, let MarketChart component handle it
+        // Load market history after refreshing data
+        await loadMarketHistory();
       } else {
         // Show loading message until API is ready
         console.log("API not ready yet, will load data when API initializes");
@@ -348,14 +364,14 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const placeBet = async (betType: number, amount: string) => {
-    if (!api) {
-      throw new Error('API not initialized');
+    if (!api || !marketId) {
+      throw new Error('API not initialized or market ID missing');
     }
 
     setIsLoading(true);
     try {
-      console.log("Placing bet via API:", { betType, amount });
-      const response = await api.placeBet(betType, amount);
+      console.log("Placing bet via API:", { marketId, betType, amount });
+      const response = await api.placeBetOnMarket(marketId, betType, amount);
       console.log("Bet response:", response);
       
       toast({
@@ -379,14 +395,14 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const sellShares = async (betType: number, amount: string) => {
-    if (!api) {
-      throw new Error('API not initialized');
+    if (!api || !marketId) {
+      throw new Error('API not initialized or market ID missing');
     }
 
     setIsLoading(true);
     try {
-      console.log("Selling shares via API:", { betType, amount });
-      const response = await api.sellShares(betType, amount);
+      console.log("Selling shares via API:", { marketId, betType, amount });
+      const response = await api.sellSharesOnMarket(marketId, betType, amount);
       console.log("Sell response:", response);
       
       toast({
@@ -410,14 +426,14 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const claimWinnings = async () => {
-    if (!api) {
-      throw new Error('API not initialized');
+    if (!api || !marketId) {
+      throw new Error('API not initialized or market ID missing');
     }
 
     setIsLoading(true);
     try {
-      console.log("Claiming winnings via API...");
-      const response = await api.claimWinnings();
+      console.log("Claiming winnings via API for market:", marketId);
+      const response = await api.claimWinningsFromMarket(marketId);
       console.log("Claim response:", response);
       
       toast({
@@ -508,27 +524,51 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       return;
     }
 
-    if (!playerId) {
-      console.warn('No player ID available for data refresh');
+    if (!playerId || !marketId) {
+      console.warn('No player ID or market ID available for data refresh');
       return;
     }
 
     try {
-      console.log('Fetching market and player data from API...');
+      console.log('Fetching market, player data and global state from API for market:', marketId);
       
-      // Query the combined state that returns both market and player data
-      const fullState = await api.queryPlayerState(playerId);
-      console.log('Full state response:', fullState);
+      // Use market-specific API calls plus global state
+      const [marketResponse, playerResponse, globalStateResponse] = await Promise.all([
+        api.getMarket(marketId),
+        api.getPlayerMarketPosition(playerId[0], playerId[1], marketId),
+        api.queryMarketState()
+      ]);
+      console.log('Market response:', marketResponse);
+      console.log('Player response:', playerResponse);
+      console.log('Global state response:', globalStateResponse);
       
-      if (fullState && fullState.state && fullState.state.market) {
-        // Transform market data from the response structure
-        const marketFromResponse = fullState.state.market;
-        const stateFromResponse = fullState.state;
+      if (marketResponse) {
+        // Transform market data from the multi-market response structure
+        const marketFromResponse = marketResponse;
         
-        // Calculate time information based on counter
-        const currentCounter: number = stateFromResponse.counter || 0;
-        const startTime = marketFromResponse.start_time || 0;
-        const endTime = marketFromResponse.end_time || 0;
+        // Update global state
+        if (globalStateResponse && globalStateResponse.state) {
+          setGlobalState({
+            counter: globalStateResponse.state.counter || 0,
+            market_ids: globalStateResponse.state.market_ids || [],
+            next_market_id: globalStateResponse.state.next_market_id || 1,
+            total_players: globalStateResponse.state.total_players || 0,
+            txsize: globalStateResponse.state.txsize || 0,
+            txcounter: globalStateResponse.state.txcounter || 0,
+          });
+        }
+        
+        // Get current counter from global state
+        const currentCounter: number = globalStateResponse?.state?.counter || 0;
+        console.log('Counter extraction:', {
+          hasGlobalState: !!globalStateResponse,
+          hasState: !!globalStateResponse?.state,
+          rawCounter: globalStateResponse?.state?.counter,
+          finalCounter: currentCounter
+        });
+        
+        const startTime = parseInt(marketFromResponse.startTime) || 0;
+        const endTime = parseInt(marketFromResponse.endTime) || 0;
         const counterInterval = 5; // 5 seconds per counter increment
         
         // Calculate elapsed and remaining time
@@ -557,13 +597,13 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         };
         
         const parsedMarketData: MarketData = {
-          title: marketFromResponse.title || "Bitcoin $100K by 2024",
-          yes_liquidity: marketFromResponse.yes_liquidity?.toString() || "0",
-          no_liquidity: marketFromResponse.no_liquidity?.toString() || "0", 
-          total_volume: marketFromResponse.total_volume?.toString() || "0",
+          titleString: marketFromResponse.titleString || "Untitled Market",
+          yes_liquidity: marketFromResponse.yesLiquidity?.toString() || "0",
+          no_liquidity: marketFromResponse.noLiquidity?.toString() || "0", 
+          total_volume: marketFromResponse.totalVolume?.toString() || "0",
           resolved: marketFromResponse.resolved || false,
           outcome: marketFromResponse.outcome,
-          total_fees_collected: marketFromResponse.total_fees_collected?.toString() || "0",
+          total_fees_collected: marketFromResponse.totalFeesCollected?.toString() || "0",
           // Add time-related fields
           counter: currentCounter,
           start_time: startTime,
@@ -587,16 +627,16 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       }
 
       // Transform player data from the response structure
-      if (fullState && fullState.player) {
-        const playerFromResponse = fullState.player;
+      if (playerResponse) {
+        const playerFromResponse = playerResponse;
         const parsedPlayerData: PlayerData = {
-          player_id: playerFromResponse.player_id || playerId,
+          player_id: [parseInt(playerId[0]), parseInt(playerId[1])],
           data: {
-            balance: playerFromResponse.data.balance?.toString() || "0",
-            yes_shares: playerFromResponse.data.yes_shares?.toString() || "0",
-            no_shares: playerFromResponse.data.no_shares?.toString() || "0",
-            claimed: playerFromResponse.data.claimed || false,
-            nonce: playerFromResponse.nonce?.toString() || "0",
+            balance: "0", // Balance not provided in market position response
+            yes_shares: playerFromResponse.yesShares?.toString() || "0",
+            no_shares: playerFromResponse.noShares?.toString() || "0",
+            claimed: playerFromResponse.claimed || false,
+            nonce: "0", // Nonce not provided in market position response
           },
         };
         console.log('Parsed player data:', parsedPlayerData);
@@ -619,42 +659,22 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const loadMarketHistory = async () => {
-    if (!api) {
-      console.warn('API not available for market history');
+    if (!api || !marketId) {
+      console.warn('API or market ID not available for market history');
       return;
     }
 
     try {
-      console.log('Loading market history...');
+      console.log('Loading market history for market:', marketId);
       
-      // Use current counter from market data, or query current state first
-      let currentCounter: number = marketData?.counter || 0;
+      // Use market-specific liquidity history API
+      const historyData = await api.getMarketLiquidityHistory(marketId);
       
-      if (currentCounter === 0) {
-        // If we don't have current counter, try to get it from current state
-        try {
-          if (playerId) {
-            const currentState = await api.queryPlayerState(playerId);
-            currentCounter = currentState?.state?.counter || 100; // fallback to 100
-          } else {
-            currentCounter = 100; // fallback if no player ID
-          }
-        } catch (error) {
-          console.warn('Failed to get current counter, using fallback:', error);
-          currentCounter = 100;
-        }
-      }
-      
-      console.log('Loading market history up to counter:', currentCounter);
-      
-      // Load history up to the current counter
-      const historyResponse: MarketHistoryResponse = await api.queryMarketHistory(currentCounter);
-      
-      if (historyResponse.success && historyResponse.data) {
-        console.log('Market history loaded:', historyResponse.data.length, 'entries');
+      if (historyData && historyData.length > 0) {
+        console.log('Market history loaded:', historyData.length, 'entries');
         
         // Convert to chart data format and calculate prices
-        const chartPoints: ChartDataPoint[] = historyResponse.data.map((entry: MarketHistoryEntry) => {
+        const chartPoints: ChartDataPoint[] = historyData.map((entry: any) => {
           const yesLiq = parseFloat(entry.yesLiquidity);
           const noLiq = parseFloat(entry.noLiquidity);
           const yesLiqBig = BigInt(Math.floor(yesLiq));
@@ -679,6 +699,8 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         
         setChartData(last100Points);
         console.log('Chart data updated with', last100Points.length, 'points (last 100 for performance)');
+      } else {
+        console.log('No market history data received');
       }
     } catch (error) {
       console.error('Failed to load market history:', error);
@@ -686,41 +708,71 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const loadUserHistory = async () => {
-    if (!api || !playerId) {
-      console.warn('API or player ID not available for user history');
+    if (!api || !playerId || !marketId) {
+      console.warn('API, player ID, or market ID not available for user history');
       return;
     }
 
     try {
-      console.log('Loading user history for player:', playerId);
+      console.log('Loading user history for player:', playerId, 'in market:', marketId);
       
-      const historyResponse: UserHistoryResponse = await api.queryUserHistory(playerId);
+      // Use market-specific user history API
+      const historyData = await api.getPlayerMarketRecentTransactions(
+        playerId[0], 
+        playerId[1], 
+        marketId,
+        20 // Get last 20 transactions
+      );
       
-      if (historyResponse.success) {
-        console.log('User history loaded:', historyResponse.count, 'transactions');
+      if (historyData && historyData.length > 0) {
+        console.log('User history loaded:', historyData.length, 'transactions');
         
-        // Keep only the last 10 transactions
-        const last10Transactions = {
-          ...historyResponse,
-          data: historyResponse.data.slice(-10).reverse(), // Reverse to show most recent first
+        // Transform to match existing UserHistoryResponse structure
+        const transformedHistory: UserHistoryResponse = {
+          success: true,
+          data: historyData.map((tx: any) => ({
+            index: tx.index || '0',
+            pid: [playerId[0], playerId[1]],
+            betType: tx.betType || 0,
+            amount: tx.amount || '0',
+            shares: tx.shares || '0',
+            counter: tx.counter || '0',
+            __v: 0
+          })),
+          count: historyData.length
         };
         
-        setUserHistory(last10Transactions);
-        console.log('User history updated with', last10Transactions.data.length, 'recent transactions');
+        setUserHistory(transformedHistory);
+      } else {
+        console.log('No user history data received');
+        // Set empty history
+        setUserHistory({
+          success: true,
+          data: [],
+          count: 0
+        });
       }
     } catch (error) {
       console.error('Failed to load user history:', error);
+      // Set empty history on error
+      setUserHistory({
+        success: false,
+        data: [],
+        count: 0
+      });
     }
   };
 
   return (
-    <MarketContext.Provider 
-      value={{
+          <MarketContext.Provider 
+        value={{
+          marketId: marketId || null,
         marketData,
         playerData,
         chartData,
         userHistory,
         playerId,
+        globalState,
         isLoading,
         api,
         initializeAPI,
