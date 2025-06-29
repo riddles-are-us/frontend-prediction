@@ -95,8 +95,8 @@ const Index = () => {
   // Handle L2 account connection
   const handleConnectL2 = async () => {
     toast({
-      title: "Connecting to App...",
-      description: "Connecting to zkWasm prediction market",
+              title: "Connecting to App...",
+        description: "Connecting to MEME prediction market",
     });
     
     try {
@@ -292,7 +292,7 @@ const Index = () => {
               {landingImageUrl ? (
                 <img 
                   src={landingImageUrl}
-                  alt="zkWasm Prediction Market"
+                  alt="MEME Prediction Market"
                   className="w-full max-w-sm h-auto rounded-lg"
                   style={{ aspectRatio: '16/9' }}
                   onError={(e) => {
@@ -305,7 +305,8 @@ const Index = () => {
                 <div className="w-full max-w-sm h-auto rounded-lg bg-gradient-to-br from-primary/10 to-blue-600/10 flex items-center justify-center p-8">
                   <div className="text-center space-y-3">
                     <div className="text-4xl">🎯</div>
-                    <div className="text-lg font-semibold text-foreground">zkWasm Prediction Market</div>
+                    <div className="text-lg font-semibold text-foreground">MEME Prediction Market</div>
+                    <div className="text-xs text-muted-foreground">powered by ZKWASM</div>
                     <div className="text-sm text-muted-foreground">Trade on future outcomes</div>
                   </div>
                 </div>
@@ -332,7 +333,7 @@ const Index = () => {
             
             <div className="text-xs text-muted-foreground">
               <p>✨ AMM-based pricing</p>
-              <p>🔒 zkWasm security</p>
+              <p>🔒 ZKWASM security</p>
               <p>💰 1% platform fee</p>
             </div>
           </div>
@@ -360,7 +361,7 @@ const Index = () => {
               <div className="p-4 bg-muted/50 rounded-lg">
                 <h3 className="font-semibold mb-2">Connect to App</h3>
                 <p className="text-sm text-muted-foreground">
-                  Connect to the zkWasm prediction market application to start trading
+                  Connect to the MEME prediction market application to start trading
                 </p>
               </div>
             </div>
@@ -398,8 +399,9 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
             {/* Header Title */}
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-bitcoin-500 to-bull-500 bg-clip-text text-transparent">
-              zkWASM Prediction Market
+              MEME Prediction Market
             </h1>
+            <p className="text-xs text-muted-foreground">powered by ZKWASM</p>
             
             {/* Status Badges */}
             <div className="flex flex-wrap gap-2">

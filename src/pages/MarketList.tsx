@@ -163,8 +163,9 @@ const MarketList = () => {
         <div className="text-center space-y-4">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-              zkWasm Prediction Markets
+              MEME Prediction Market
             </h1>
+            <p className="text-sm text-muted-foreground font-medium">powered by ZKWASM</p>
             <h2 className="text-2xl font-semibold mt-2">Choose a Prediction Market</h2>
             <p className="text-muted-foreground">Select a market to start trading</p>
           </div>

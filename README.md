@@ -1,4 +1,4 @@
-# zkWasm Prediction Market
+# MEME Prediction Market (powered by ZKWASM)
 
 A decentralized AMM-based prediction market built with zkWasm technology.
 
