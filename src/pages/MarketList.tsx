@@ -161,16 +161,11 @@ const MarketList = () => {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <img 
-            src="/platform-banner.png" 
-            alt="zkWasm Prediction Markets"
-            className="h-12 w-auto mx-auto"
-            onError={(e) => {
-              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQ4IiB2aWV3Qm94PSIwIDAgNDAwIDQ4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI0YzRjRGNiIvPgo8dGV4dCB4PSIyMDAiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM2NTczODQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPnprV2FzbSBQcmVkaWN0aW9uIE1hcmtldHM8L3RleHQ+Cjwvc3ZnPgo=';
-            }}
-          />
           <div>
-            <h1 className="text-3xl font-bold">Choose a Prediction Market</h1>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+              zkWasm Prediction Markets
+            </h1>
+            <h2 className="text-2xl font-semibold mt-2">Choose a Prediction Market</h2>
             <p className="text-muted-foreground">Select a market to start trading</p>
           </div>
         </div>
