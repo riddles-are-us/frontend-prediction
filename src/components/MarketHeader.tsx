@@ -4,6 +4,7 @@ import { MarketData } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
 import { Badge } from './ui/badge';
 import { Card } from './ui/card';
+import sanityService from '../services/sanityService';
 
 interface MarketHeaderProps {
   market: MarketData;
@@ -11,6 +12,23 @@ interface MarketHeaderProps {
 
 const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
   const [liveTimeRemaining, setLiveTimeRemaining] = useState<string>(market.time_remaining || "Loading...");
+  const [landingImageUrl, setLandingImageUrl] = useState<string | null>(null);
+
+  // Fetch landing image from Sanity
+  useEffect(() => {
+    const fetchLandingImage = async () => {
+      try {
+        // Extract market ID from URL or use a default method
+        const marketId = parseInt(window.location.pathname.split('/').pop() || '1');
+        const imageUrl = await sanityService.getMarketLandingImageUrl(marketId);
+        setLandingImageUrl(imageUrl);
+      } catch (error) {
+        console.error('Failed to fetch landing image:', error);
+      }
+    };
+
+    fetchLandingImage();
+  }, []);
 
   // Update time remaining every second for real-time countdown
   useEffect(() => {
@@ -95,6 +113,21 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
 
   return (
     <Card className="gradient-card market-glow p-6 mb-6 animate-fade-in">
+      {/* Landing Image */}
+      {landingImageUrl && (
+        <div className="mb-6">
+          <img 
+            src={landingImageUrl} 
+            alt={market.titleString}
+            className="w-full h-48 object-cover rounded-lg"
+            onError={(e) => {
+              console.error('Failed to load landing image');
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+      
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">

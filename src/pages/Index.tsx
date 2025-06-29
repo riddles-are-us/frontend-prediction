@@ -14,11 +14,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { useMarket } from '../contexts/MarketContext';
 import { useWallet } from '../contexts/WalletContext';
 import { useToast } from '../hooks/use-toast';
+import sanityService from '../services/sanityService';
 
 const Index = () => {
   const { marketId } = useParams<{ marketId: string }>();
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState("trade");
+  const [landingImageUrl, setLandingImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
   
   const { 
@@ -263,6 +265,22 @@ const Index = () => {
 
   const { yesPercentage, noPercentage } = getMarketPercentages();
 
+  // Fetch landing image from Sanity
+  useEffect(() => {
+    const fetchLandingImage = async () => {
+      if (marketId) {
+        try {
+          const imageUrl = await sanityService.getMarketLandingImageUrl(parseInt(marketId));
+          setLandingImageUrl(imageUrl);
+        } catch (error) {
+          console.error('Failed to fetch landing image from Sanity:', error);
+        }
+      }
+    };
+
+    fetchLandingImage();
+  }, [marketId]);
+
   // Show connect wallet screen if not connected to L1
   if (!isConnected) {
     return (
@@ -272,13 +290,15 @@ const Index = () => {
             {/* Landing Page Image */}
             <div className="flex justify-center">
               <img 
-                src={`/landing-hero-${marketId || 'default'}.png`}
+                src={landingImageUrl || `/landing-hero-${marketId || 'default'}.png`}
                 alt="zkWasm Prediction Market"
                 className="w-full max-w-sm h-auto rounded-lg"
                 style={{ aspectRatio: '16/9' }}
                 onError={(e) => {
-                  // Try generic fallback first
-                  if (e.currentTarget.src.includes(`landing-hero-${marketId}`)) {
+                  // If Sanity image fails, try local files
+                  if (landingImageUrl && e.currentTarget.src === landingImageUrl) {
+                    e.currentTarget.src = `/landing-hero-${marketId || 'default'}.png`;
+                  } else if (e.currentTarget.src.includes(`landing-hero-${marketId}`)) {
                     e.currentTarget.src = '/landing-hero.png';
                   } else if (e.currentTarget.src.includes('landing-hero.png')) {
                     // Final fallback to placeholder
@@ -373,22 +393,10 @@ const Index = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-            {/* Header Banner Image */}
-            <img 
-              src={`/header-banner-${marketId || 'default'}.png`}
-              alt="zkWasm Prediction Market"
-              className="h-6 sm:h-8 w-auto max-w-[200px] sm:max-w-[300px]"
-              onError={(e) => {
-                // Try generic fallback first
-                if (e.currentTarget.src.includes(`header-banner-${marketId}`)) {
-                  e.currentTarget.src = '/header-banner.png';
-                } else if (e.currentTarget.src.includes('header-banner.png')) {
-                  // Final fallback to placeholder
-                  e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0IiB2aWV3Qm94PSIwIDAgMjAwIDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iI0YzRjRGNiIvPgo8cGF0aCBkPSJNNiA2SDE4QzE5LjEwNDYgNiAyMCA2Ljg5NTQzIDIwIDhWMTZDMjAgMTcuMTA0NiAxOS4xMDQ2IDE4IDE4IDE4SDZDNC44OTU0MyAxOCA0IDE3LjEwNDYgNCAxNlY4QzQgNi44OTU0MyA0Ljg5NTQzIDYgNiA2WiIgZmlsbD0iIzlDQTNBRiIvPgo8dGV4dCB4PSIxMDAiIHk9IjE0IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTAiIGZpbGw9IiM2NTczODQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkhlYWRlciBCYW5uZXI8L3RleHQ+Cjwvc3ZnPgo=';
-                  e.currentTarget.alt = 'Header Banner Placeholder';
-                }
-              }}
-            />
+            {/* Header Title */}
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-bitcoin-500 to-bull-500 bg-clip-text text-transparent">
+              zkWASM Prediction Market
+            </h1>
             
             {/* Status Badges */}
             <div className="flex flex-wrap gap-2">

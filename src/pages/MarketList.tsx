@@ -5,6 +5,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import PredictionMarketAPI from '../services/api';
+import sanityService, { SanityMarket } from '../services/sanityService';
 
 interface Market {
   marketId: string;
@@ -15,6 +16,8 @@ interface Market {
   totalVolume: string;
   resolved: boolean;
   outcome?: boolean;
+  landingUrl?: string;
+  sanityData?: SanityMarket;
 }
 
 const MarketList = () => {
@@ -44,8 +47,24 @@ const MarketList = () => {
     try {
       setLoading(true);
       setError(null);
-      const allMarkets = await api.getAllMarkets();
-      setMarkets(allMarkets);
+      
+      // Fetch markets from both backend and Sanity
+      const [backendMarkets, sanityMarkets] = await Promise.all([
+        api.getAllMarkets(),
+        sanityService.getAllMarketsWithImages()
+      ]);
+      
+      // Merge backend markets with Sanity data
+      const mergedMarkets = backendMarkets.map(backendMarket => {
+        const sanityMarket = sanityMarkets.find(sm => sm.id.toString() === backendMarket.marketId);
+        return {
+          ...backendMarket,
+          landingUrl: sanityMarket?.landingUrl,
+          sanityData: sanityMarket
+        };
+      });
+      
+      setMarkets(mergedMarkets);
     } catch (err) {
       console.error('Failed to fetch markets:', err);
       setError(err instanceof Error ? err.message : 'Failed to load markets');
@@ -125,6 +144,21 @@ const MarketList = () => {
             return (
               <Link key={market.marketId} to={`/${market.marketId}`}>
                 <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
+                  {/* Landing Image */}
+                  {market.landingUrl && (
+                    <div className="aspect-video overflow-hidden rounded-t-lg">
+                      <img 
+                        src={market.landingUrl} 
+                        alt={market.titleString}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          console.error('Failed to load market landing image');
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                  
                   <CardHeader className="space-y-3">
                     <div className="flex items-start justify-between">
                       <CardTitle className="text-lg group-hover:text-primary transition-colors">
