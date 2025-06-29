@@ -289,24 +289,27 @@ const Index = () => {
           <div className="space-y-6">
             {/* Landing Page Image */}
             <div className="flex justify-center">
-              <img 
-                src={landingImageUrl || `/landing-hero-${marketId || 'default'}.png`}
-                alt="zkWasm Prediction Market"
-                className="w-full max-w-sm h-auto rounded-lg"
-                style={{ aspectRatio: '16/9' }}
-                onError={(e) => {
-                  // If Sanity image fails, try local files
-                  if (landingImageUrl && e.currentTarget.src === landingImageUrl) {
-                    e.currentTarget.src = `/landing-hero-${marketId || 'default'}.png`;
-                  } else if (e.currentTarget.src.includes(`landing-hero-${marketId}`)) {
-                    e.currentTarget.src = '/landing-hero.png';
-                  } else if (e.currentTarget.src.includes('landing-hero.png')) {
-                    // Final fallback to placeholder
-                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgdmlld0JveD0iMCAwIDQwMCAyMjUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjI1IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMjAgMTEyLjVMMTYwIDcyLjVMMjAwIDExMi41TDI0MCA3Mi41TDI4MCAxMTIuNUwyODAgMTUyLjVMMjQwIDE1Mi41TDIwMCAxMTIuNUwxNjAgMTUyLjVMMTIwIDE1Mi41TDEyMCAxMTIuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHR4dCB4PSIyMDAiIHk9IjE4NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjU3Mzg0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5MYW5kaW5nIEhlcm8gSW1hZ2U8L3RleHQ+Cjwvc3ZnPgo=';
-                    e.currentTarget.alt = 'Landing Hero Image Placeholder';
-                  }
-                }}
-              />
+              {landingImageUrl ? (
+                <img 
+                  src={landingImageUrl}
+                  alt="zkWasm Prediction Market"
+                  className="w-full max-w-sm h-auto rounded-lg"
+                  style={{ aspectRatio: '16/9' }}
+                  onError={(e) => {
+                    // If Sanity image fails, use placeholder
+                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgdmlld0JveD0iMCAwIDQwMCAyMjUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjI1IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMjAgMTEyLjVMMTYwIDcyLjVMMjAwIDExMi41TDI0MCA3Mi41TDI4MCAxMTIuNUwyODAgMTUyLjVMMjQwIDE1Mi41TDIwMCAxMTIuNUwxNjAgMTUyLjVMMTIwIDE1Mi41TDEyMCAxMTIuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHR4dCB4PSIyMDAiIHk9IjE4NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjU3Mzg0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5QcmVkaWN0aW9uIE1hcmtldDwvdGV4dD4KPC9zdmc+Cg==';
+                    e.currentTarget.alt = 'Prediction Market Placeholder';
+                  }}
+                />
+              ) : (
+                <div className="w-full max-w-sm h-auto rounded-lg bg-gradient-to-br from-primary/10 to-blue-600/10 flex items-center justify-center p-8">
+                  <div className="text-center space-y-3">
+                    <div className="text-4xl">🎯</div>
+                    <div className="text-lg font-semibold text-foreground">zkWasm Prediction Market</div>
+                    <div className="text-sm text-muted-foreground">Trade on future outcomes</div>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="space-y-4">
