@@ -1,6 +1,7 @@
 // Market and AMM types for the prediction market
 export interface MarketData {
   titleString: string;
+  description?: string;
   yes_liquidity: string;
   no_liquidity: string;
   total_volume: string;
@@ -11,9 +12,11 @@ export interface MarketData {
   counter?: number;
   start_time?: number;
   end_time?: number;
+  resolution_time?: number;
   time_remaining?: string;
-  elapsed_time?: number;
   remaining_time?: number;
+  market_status?: string;
+  market_status_text?: string;
 }
 
 export interface PlayerData {

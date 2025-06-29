@@ -169,3 +169,103 @@ export class MarketCalculations {
     return price * 100;
   }
 }
+
+export enum MarketStatus {
+  WAIT_START = 'WAIT_START',
+  ACTIVE_TRADING = 'ACTIVE_TRADING', 
+  WAIT_RESOLUTION = 'WAIT_RESOLUTION',
+  PENDING_RESOLUTION = 'PENDING_RESOLUTION',
+  RESOLVED = 'RESOLVED'
+}
+
+export interface MarketStatusInfo {
+  status: MarketStatus;
+  statusText: string;
+  timeRemaining: number; // seconds
+  timeRemainingText: string;
+}
+
+/**
+ * Determine market status based on current counter and market timing
+ */
+export function getMarketStatus(
+  currentCounter: number,
+  startTime: number,
+  endTime: number,
+  resolutionTime: number,
+  resolved: boolean,
+  counterInterval: number = 5 // 5 seconds per counter
+): MarketStatusInfo {
+  const formatTimeRemaining = (seconds: number): string => {
+    if (seconds <= 0) return "0s";
+    
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
+  // If market is already resolved
+  if (resolved) {
+    return {
+      status: MarketStatus.RESOLVED,
+      statusText: "Resolved",
+      timeRemaining: 0,
+      timeRemainingText: "Market Resolved"
+    };
+  }
+
+  // Before start time - waiting to start
+  if (currentCounter < startTime) {
+    const remainingCounters = startTime - currentCounter;
+    const remainingSeconds = remainingCounters * counterInterval;
+    return {
+      status: MarketStatus.WAIT_START,
+      statusText: "Wait Start",
+      timeRemaining: remainingSeconds,
+      timeRemainingText: formatTimeRemaining(remainingSeconds)
+    };
+  }
+
+  // Between start and end time - active trading
+  if (currentCounter >= startTime && currentCounter < endTime) {
+    const remainingCounters = endTime - currentCounter;
+    const remainingSeconds = remainingCounters * counterInterval;
+    return {
+      status: MarketStatus.ACTIVE_TRADING,
+      statusText: "Active Trading",
+      timeRemaining: remainingSeconds,
+      timeRemainingText: formatTimeRemaining(remainingSeconds)
+    };
+  }
+
+  // Between end time and resolution time - waiting for resolution
+  if (currentCounter >= endTime && currentCounter < resolutionTime) {
+    const remainingCounters = resolutionTime - currentCounter;
+    const remainingSeconds = remainingCounters * counterInterval;
+    return {
+      status: MarketStatus.WAIT_RESOLUTION,
+      statusText: "Wait Resolution",
+      timeRemaining: remainingSeconds,
+      timeRemainingText: formatTimeRemaining(remainingSeconds)
+    };
+  }
+
+  // After resolution time but not yet resolved - pending resolution
+  return {
+    status: MarketStatus.PENDING_RESOLUTION,
+    statusText: "Pending Resolution",
+    timeRemaining: 0,
+    timeRemainingText: "Awaiting Resolution"
+  };
+}

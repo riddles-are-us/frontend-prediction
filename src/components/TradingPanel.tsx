@@ -1,14 +1,15 @@
-import { AlertTriangle, TrendingUp } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Clock } from 'lucide-react';
 import React, { useState } from 'react';
 import { useToast } from '../hooks/use-toast';
 import { MarketData, PlayerData } from '../types/market';
-import { MarketCalculations } from '../utils/market-calculations';
+import { MarketCalculations, MarketStatus } from '../utils/market-calculations';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Alert, AlertDescription } from './ui/alert';
 
 interface TradingPanelProps {
   market: MarketData;
@@ -22,6 +23,14 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
   const [sellShares, setSellShares] = useState('');
   const [selectedPosition, setSelectedPosition] = useState<'YES' | 'NO'>('YES');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check market status for trading eligibility
+  const marketStatus = market.market_status as MarketStatus;
+  const canTrade = marketStatus === MarketStatus.ACTIVE_TRADING;
+  const isWaitingToStart = marketStatus === MarketStatus.WAIT_START;
+  const isWaitingResolution = marketStatus === MarketStatus.WAIT_RESOLUTION;
+  const isPendingResolution = marketStatus === MarketStatus.PENDING_RESOLUTION;
+  const isResolved = market.resolved || marketStatus === MarketStatus.RESOLVED;
 
   // Provide default values to handle undefined market data
   const yesLiquidity = BigInt(market.yes_liquidity || 0);
@@ -157,10 +166,31 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Market Status Alert */}
+        {!canTrade && (
+          <Alert className="mb-4">
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              {isWaitingToStart && (
+                <>Trading has not started yet. Trading will begin in {market.time_remaining}.</>
+              )}
+              {isWaitingResolution && (
+                <>Trading has ended. Waiting for market resolution in {market.time_remaining}.</>
+              )}
+              {isPendingResolution && (
+                <>Trading has ended. Market is awaiting resolution.</>
+              )}
+              {isResolved && (
+                <>This market has been resolved. No more trading is allowed.</>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Tabs defaultValue="buy" className="space-y-4">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="buy">Buy Shares</TabsTrigger>
-            <TabsTrigger value="sell">Sell Shares</TabsTrigger>
+            <TabsTrigger value="buy" disabled={!canTrade}>Buy Shares</TabsTrigger>
+            <TabsTrigger value="sell" disabled={!canTrade}>Sell Shares</TabsTrigger>
           </TabsList>
 
           <TabsContent value="buy" className="space-y-4">
@@ -170,6 +200,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 variant={selectedPosition === 'YES' ? "default" : "outline"}
                 className={selectedPosition === 'YES' ? "price-gradient-yes text-white" : ""}
                 onClick={() => setSelectedPosition('YES')}
+                disabled={!canTrade}
               >
                 YES ({MarketCalculations.formatPrice(prices.yesPrice)})
               </Button>
@@ -177,6 +208,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 variant={selectedPosition === 'NO' ? "default" : "outline"}
                 className={selectedPosition === 'NO' ? "price-gradient-no text-white" : ""}
                 onClick={() => setSelectedPosition('NO')}
+                disabled={!canTrade}
               >
                 NO ({MarketCalculations.formatPrice(prices.noPrice)})
               </Button>
@@ -192,7 +224,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                     variant="outline"
                     size="sm"
                     onClick={() => setBuyAmount(amount.toString())}
-                    disabled={amount > balance}
+                    disabled={!canTrade || amount > balance}
                   >
                     {amount}
                   </Button>
@@ -206,10 +238,11 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
               <Input
                 id="buyAmount"
                 type="number"
-                placeholder="Enter amount"
+                placeholder={canTrade ? "Enter amount" : "Trading not available"}
                 value={buyAmount}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBuyAmount(e.target.value)}
                 className="text-lg"
+                disabled={!canTrade}
               />
               <div className="text-sm text-muted-foreground">
                 Balance: {balance.toLocaleString()} tokens
@@ -255,10 +288,12 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
 
             <Button 
               onClick={handleBuy}
-              disabled={!buyAmount || buyAmountNum <= 0 || buyAmountNum > balance || amountAfterFees <= 0 || isLoading}
+              disabled={!canTrade || !buyAmount || buyAmountNum <= 0 || buyAmountNum > balance || amountAfterFees <= 0 || isLoading}
               className="w-full price-gradient-yes hover:opacity-90"
             >
-              {isLoading ? "Processing..." : `Buy ${selectedPosition} Shares`}
+              {isLoading ? "Processing..." : 
+               !canTrade ? "Trading Not Available" : 
+               `Buy ${selectedPosition} Shares`}
             </Button>
           </TabsContent>
 
@@ -269,7 +304,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 variant={selectedPosition === 'YES' ? "default" : "outline"}
                 className={selectedPosition === 'YES' ? "price-gradient-yes text-white" : ""}
                 onClick={() => setSelectedPosition('YES')}
-                disabled={yesShares === 0}
+                disabled={!canTrade || yesShares === 0}
               >
                 YES ({yesShares} shares)
               </Button>
@@ -277,7 +312,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 variant={selectedPosition === 'NO' ? "default" : "outline"}
                 className={selectedPosition === 'NO' ? "price-gradient-no text-white" : ""}
                 onClick={() => setSelectedPosition('NO')}
-                disabled={noShares === 0}
+                disabled={!canTrade || noShares === 0}
               >
                 NO ({noShares} shares)
               </Button>
@@ -289,11 +324,12 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
               <Input
                 id="sellShares"
                 type="number"
-                placeholder="Enter shares"
+                placeholder={canTrade ? "Enter shares" : "Trading not available"}
                 value={sellShares}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSellShares(e.target.value)}
                 className="text-lg"
                 max={selectedPosition === 'YES' ? yesShares : noShares}
+                disabled={!canTrade}
               />
               <div className="text-sm text-muted-foreground">
                 Available: {selectedPosition === 'YES' ? yesShares : noShares} {selectedPosition} shares
@@ -314,7 +350,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                         variant="outline"
                         size="sm"
                         onClick={() => setSellShares(sharesToSell.toString())}
-                        disabled={sharesToSell === 0}
+                        disabled={!canTrade || sharesToSell === 0}
                       >
                         {percentage}%
                       </Button>
@@ -355,10 +391,12 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
 
             <Button 
               onClick={handleSell}
-              disabled={!sellShares || sellSharesNum <= 0 || isLoading}
+              disabled={!canTrade || !sellShares || sellSharesNum <= 0 || isLoading}
               className="w-full price-gradient-no hover:opacity-90"
             >
-              {isLoading ? "Processing..." : `Sell ${selectedPosition} Shares`}
+              {isLoading ? "Processing..." : 
+               !canTrade ? "Trading Not Available" : 
+               `Sell ${selectedPosition} Shares`}
             </Button>
           </TabsContent>
         </Tabs>

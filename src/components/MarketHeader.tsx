@@ -1,7 +1,7 @@
-import { Clock, TrendingUp, Users } from 'lucide-react';
+import { Clock, TrendingUp, Users, Timer, CheckCircle, AlertCircle, Pause } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { MarketData } from '../types/market';
-import { MarketCalculations } from '../utils/market-calculations';
+import { MarketCalculations, MarketStatus } from '../utils/market-calculations';
 import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import sanityService from '../services/sanityService';
@@ -13,27 +13,39 @@ interface MarketHeaderProps {
 const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
   const [liveTimeRemaining, setLiveTimeRemaining] = useState<string>(market.time_remaining || "Loading...");
   const [landingImageUrl, setLandingImageUrl] = useState<string | null>(null);
+  const [marketDescription, setMarketDescription] = useState<string | null>(null);
 
-  // Fetch landing image from Sanity
+  // Fetch market data from Sanity (including landing image and description)
   useEffect(() => {
-    const fetchLandingImage = async () => {
+    const fetchMarketData = async () => {
       try {
         // Extract market ID from URL or use a default method
         const marketId = parseInt(window.location.pathname.split('/').pop() || '1');
-        const imageUrl = await sanityService.getMarketLandingImageUrl(marketId);
-        setLandingImageUrl(imageUrl);
+        
+        // Fetch complete market data from Sanity
+        const sanityMarket = await sanityService.getMarketById(marketId);
+        
+        if (sanityMarket) {
+          // Set description
+          setMarketDescription(sanityMarket.description);
+          
+          // Fetch landing image URL separately if needed
+          const imageUrl = await sanityService.getMarketLandingImageUrl(marketId);
+          setLandingImageUrl(imageUrl);
+        }
       } catch (error) {
-        console.error('Failed to fetch landing image:', error);
+        console.error('Failed to fetch market data from Sanity:', error);
       }
     };
 
-    fetchLandingImage();
+    fetchMarketData();
   }, []);
 
   // Update time remaining every second for real-time countdown
   useEffect(() => {
-    if (!market.remaining_time || market.remaining_time <= 0) {
-      setLiveTimeRemaining("Market Ended");
+    // If market is resolved or has no time remaining, show static text
+    if (market.resolved || !market.remaining_time || market.remaining_time <= 0) {
+      setLiveTimeRemaining(market.time_remaining || "Market Ended");
       return;
     }
 
@@ -45,7 +57,7 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
       remainingSeconds -= 1;
       
       if (remainingSeconds <= 0) {
-        setLiveTimeRemaining("Market Ended");
+        setLiveTimeRemaining("Time Ended");
         clearInterval(interval);
         return;
       }
@@ -72,7 +84,7 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [market.remaining_time, market.time_remaining]);
+  }, [market.remaining_time, market.time_remaining, market.resolved]);
 
   // Provide default values to handle undefined market data
   const yesLiquidity = BigInt(market.yes_liquidity || 0);
@@ -111,6 +123,83 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
     noChance: MarketCalculations.priceToImpliedProbability(prices.noPrice)
   });
 
+  // Generate status badges based on market state
+  const renderStatusBadges = () => {
+    const badges = [];
+    const marketStatus = market.market_status as MarketStatus;
+
+    // Main status badge
+    switch (marketStatus) {
+      case MarketStatus.WAIT_START:
+        badges.push(
+          <Badge key="status" variant="secondary" className="flex items-center gap-1">
+            <Timer className="h-3 w-3" />
+            Waiting to Start
+          </Badge>
+        );
+        break;
+      case MarketStatus.ACTIVE_TRADING:
+        badges.push(
+          <Badge key="status" variant="default" className="flex items-center gap-1 bg-green-600">
+            <TrendingUp className="h-3 w-3" />
+            Active Trading
+          </Badge>
+        );
+        break;
+      case MarketStatus.WAIT_RESOLUTION:
+        badges.push(
+          <Badge key="status" variant="outline" className="flex items-center gap-1 border-orange-300 text-orange-700">
+            <Pause className="h-3 w-3" />
+            Trading Ended
+          </Badge>
+        );
+        break;
+      case MarketStatus.PENDING_RESOLUTION:
+        badges.push(
+          <Badge key="status" variant="outline" className="flex items-center gap-1 border-yellow-300 text-yellow-700">
+            <AlertCircle className="h-3 w-3" />
+            Awaiting Resolution
+          </Badge>
+        );
+        break;
+      case MarketStatus.RESOLVED:
+      default:
+        if (market.resolved) {
+          badges.push(
+            <Badge key="status" variant="secondary" className="flex items-center gap-1 bg-gray-600">
+              <CheckCircle className="h-3 w-3" />
+              Resolved
+            </Badge>
+          );
+        } else {
+          badges.push(
+            <Badge key="status" variant="default" className="flex items-center gap-1">
+              <TrendingUp className="h-3 w-3" />
+              Active
+            </Badge>
+          );
+        }
+        break;
+    }
+
+    // Resolution result badge (only if resolved)
+    if (market.resolved && market.outcome !== undefined) {
+      const outcomeText = market.outcome ? "YES Won" : "NO Won";
+      const outcomeVariant = market.outcome ? "default" : "secondary";
+      const outcomeClass = market.outcome 
+        ? "bg-green-600 text-white" 
+        : "bg-red-600 text-white";
+      
+      badges.push(
+        <Badge key="outcome" variant={outcomeVariant} className={`${outcomeClass} font-semibold`}>
+          {outcomeText}
+        </Badge>
+      );
+    }
+
+    return badges;
+  };
+
   return (
     <Card className="gradient-card market-glow p-6 mb-6 animate-fade-in">
       {/* Landing Image */}
@@ -128,27 +217,37 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
         </div>
       )}
       
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="space-y-4">
+        {/* Title and Status Badges */}
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-              {market.titleString}
-            </h1>
-            <Badge 
-              variant={market.resolved ? "destructive" : "default"}
-              className="text-sm"
-            >
-              {market.resolved ? "Resolved" : "Active"}
-            </Badge>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+            {market.titleString}
+          </h1>
+          <div className="flex flex-wrap gap-2">
+            {renderStatusBadges()}
           </div>
         </div>
-
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Clock className="h-5 w-5" />
-            <span className="font-medium">{liveTimeRemaining}</span>
+        
+        {/* Market Description */}
+        {marketDescription && (
+          <div className="text-muted-foreground leading-relaxed max-w-2xl">
+            <p>{marketDescription}</p>
           </div>
-          
+        )}
+
+        {/* Second Row: Time Information */}
+        <div className="flex items-center gap-2 text-lg">
+          <Clock className="h-6 w-6 text-primary" />
+          <div className="font-semibold">
+            <span className="text-muted-foreground">
+              {market.market_status_text || "Active"}:
+            </span>
+            <span className="ml-2 text-foreground">{liveTimeRemaining}</span>
+          </div>
+        </div>
+        
+        {/* Third Row: Volume and Liquidity */}
+        <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-2 text-muted-foreground">
             <TrendingUp className="h-5 w-5" />
             <span className="font-medium">

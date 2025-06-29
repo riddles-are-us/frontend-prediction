@@ -54,13 +54,13 @@ interface MarketProviderProps {
 }
 
 // Default server configuration
-const DEFAULT_CONFIG = {
-  serverUrl: "https://rpc.btcprediction.zkwasm.ai", // RPC server URL
-};
-
 // const DEFAULT_CONFIG = {
-//   serverUrl: "http://localhost:3000"
+//   serverUrl: "https://rpc.btcprediction.zkwasm.ai", // RPC server URL
 // };
+
+const DEFAULT_CONFIG = {
+  serverUrl: "http://localhost:3000"
+};
 
 export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   const { marketId } = useParams<{ marketId: string }>();
@@ -569,32 +569,19 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         
         const startTime = parseInt(marketFromResponse.startTime) || 0;
         const endTime = parseInt(marketFromResponse.endTime) || 0;
+        const resolutionTime = parseInt(marketFromResponse.resolutionTime) || 0;
         const counterInterval = 5; // 5 seconds per counter increment
         
-        // Calculate elapsed and remaining time
-        const elapsedCounters = currentCounter - startTime;
-        const remainingCounters = endTime - currentCounter;
-        const remainingSeconds = Math.max(0, remainingCounters * counterInterval);
-        
-        // Format remaining time
-        const formatTimeRemaining = (seconds: number): string => {
-          if (seconds <= 0) return "Market Ended";
-          
-          const days = Math.floor(seconds / 86400);
-          const hours = Math.floor((seconds % 86400) / 3600);
-          const minutes = Math.floor((seconds % 3600) / 60);
-          const secs = seconds % 60;
-          
-          if (days > 0) {
-            return `${days}d ${hours}h ${minutes}m`;
-          } else if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-          } else if (minutes > 0) {
-            return `${minutes}m ${secs}s`;
-          } else {
-            return `${secs}s`;
-          }
-        };
+        // Import market calculations for status
+        const { getMarketStatus } = await import('../utils/market-calculations.js');
+        const marketStatus = getMarketStatus(
+          currentCounter,
+          startTime,
+          endTime,
+          resolutionTime,
+          marketFromResponse.resolved || false,
+          counterInterval
+        );
         
         const parsedMarketData: MarketData = {
           titleString: marketFromResponse.titleString || "Untitled Market",
@@ -608,17 +595,18 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
           counter: currentCounter,
           start_time: startTime,
           end_time: endTime,
-          time_remaining: formatTimeRemaining(remainingSeconds),
-          elapsed_time: elapsedCounters * counterInterval,
-          remaining_time: remainingSeconds,
+          resolution_time: resolutionTime,
+          time_remaining: marketStatus.timeRemainingText,
+          remaining_time: marketStatus.timeRemaining,
+          market_status: marketStatus.status,
+          market_status_text: marketStatus.statusText,
         };
         console.log('Parsed market data with time info:', {
           currentCounter,
           startTime,
           endTime,
-          elapsedCounters,
-          remainingCounters,
-          remainingSeconds,
+          resolutionTime,
+          marketStatus,
           timeRemaining: parsedMarketData.time_remaining
         });
         setMarketData(parsedMarketData);

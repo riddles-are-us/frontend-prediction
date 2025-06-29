@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import PredictionMarketAPI from '../services/api';
 import sanityService, { SanityMarket } from '../services/sanityService';
+import { getMarketStatus, MarketStatus } from '../utils/market-calculations';
 
 interface Market {
   marketId: string;
@@ -18,6 +19,10 @@ interface Market {
   outcome?: boolean;
   landingUrl?: string;
   sanityData?: SanityMarket;
+  // Time fields from API
+  startTime?: string;
+  endTime?: string;
+  resolutionTime?: string;
 }
 
 const MarketList = () => {
@@ -25,12 +30,17 @@ const MarketList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [api, setApi] = useState<PredictionMarketAPI | null>(null);
+  const [currentCounter, setCurrentCounter] = useState<number>(0);
 
   // Initialize API for market list (doesn't need wallet connection)
   useEffect(() => {
     try {
+      // const config = {
+      //   serverUrl: "https://rpc.btcprediction.zkwasm.ai", //"http://localhost:3000", // Use the same server URL
+      //   privkey: "00000000" // Dummy private key for read-only operations
+      // };
       const config = {
-        serverUrl: "https://rpc.btcprediction.zkwasm.ai", //"http://localhost:3000", // Use the same server URL
+        serverUrl: "http://localhost:3000", // Use the same server URL
         privkey: "00000000" // Dummy private key for read-only operations
       };
       const apiInstance = new PredictionMarketAPI(config);
@@ -48,15 +58,20 @@ const MarketList = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch markets from both backend and Sanity
-      const [backendMarkets, sanityMarkets] = await Promise.all([
+      // Fetch markets, Sanity data, and global state
+      const [backendMarkets, sanityMarkets, globalStateResponse] = await Promise.all([
         api.getAllMarkets(),
-        sanityService.getAllMarketsWithImages()
+        sanityService.getAllMarketsWithImages(),
+        api.queryMarketState()
       ]);
       
+      // Update current counter from global state
+      const counter = globalStateResponse?.state?.counter || 0;
+      setCurrentCounter(counter);
+      
       // Merge backend markets with Sanity data
-      const mergedMarkets = backendMarkets.map(backendMarket => {
-        const sanityMarket = sanityMarkets.find(sm => sm.id.toString() === backendMarket.marketId);
+      const mergedMarkets = backendMarkets.map((backendMarket: any) => {
+        const sanityMarket = sanityMarkets.find((sm: any) => sm.id.toString() === backendMarket.marketId);
         return {
           ...backendMarket,
           landingUrl: sanityMarket?.landingUrl,
@@ -92,6 +107,29 @@ const MarketList = () => {
 
   const formatNumber = (num: string) => {
     return parseInt(num).toLocaleString();
+  };
+
+  const getMarketStatusForDisplay = (market: Market) => {
+    if (!market.startTime || !market.endTime || !market.resolutionTime) {
+      // Fallback to simple resolved check if timing data is not available
+      return market.resolved ? "Resolved" : "Active Trading";
+    }
+
+    const startTime = parseInt(market.startTime);
+    const endTime = parseInt(market.endTime);
+    const resolutionTime = parseInt(market.resolutionTime);
+    const counterInterval = 5; // 5 seconds per counter
+    
+    const marketStatus = getMarketStatus(
+      currentCounter,
+      startTime,
+      endTime,
+      resolutionTime,
+      market.resolved,
+      counterInterval
+    );
+
+    return marketStatus.statusText;
   };
 
   if (loading) {
@@ -214,8 +252,11 @@ const MarketList = () => {
 
                     {/* Status */}
                     <div className="pt-2 border-t">
-                      <Badge variant={market.resolved ? "secondary" : "default"} className="w-full justify-center">
-                        {market.resolved ? "Resolved" : "Active Trading"}
+                      <Badge 
+                        variant={market.resolved ? "secondary" : "default"} 
+                        className="w-full justify-center"
+                      >
+                        {getMarketStatusForDisplay(market)}
                       </Badge>
                     </div>
                   </CardContent>
