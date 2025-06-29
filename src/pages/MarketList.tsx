@@ -35,14 +35,14 @@ const MarketList = () => {
   // Initialize API for market list (doesn't need wallet connection)
   useEffect(() => {
     try {
-      // const config = {
-      //   serverUrl: "https://rpc.btcprediction.zkwasm.ai", //"http://localhost:3000", // Use the same server URL
-      //   privkey: "00000000" // Dummy private key for read-only operations
-      // };
       const config = {
-        serverUrl: "http://localhost:3000", // Use the same server URL
+        serverUrl: "https://rpc.btcprediction.zkwasm.ai", //"http://localhost:3000", // Use the same server URL
         privkey: "00000000" // Dummy private key for read-only operations
       };
+      // const config = {
+      //   serverUrl: "http://localhost:3000", // Use the same server URL
+      //   privkey: "00000000" // Dummy private key for read-only operations
+      // };
       const apiInstance = new PredictionMarketAPI(config);
       setApi(apiInstance);
     } catch (error) {
