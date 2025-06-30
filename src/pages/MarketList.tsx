@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import PredictionMarketAPI from '../services/api';
 import sanityService, { SanityMarket } from '../services/sanityService';
 import { getMarketStatus, MarketStatus } from '../utils/market-calculations';
+import Footer from '../components/Footer';
 
 interface Market {
   marketId: string;
@@ -268,6 +269,7 @@ const MarketList = () => {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 };

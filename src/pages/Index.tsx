@@ -16,6 +16,7 @@ import { useMarket } from '../contexts/MarketContext';
 import { useWallet } from '../contexts/WalletContext';
 import { useToast } from '../hooks/use-toast';
 import sanityService from '../services/sanityService';
+import Footer from '../components/Footer';
 
 const Index = () => {
   const { marketId } = useParams<{ marketId: string }>();
@@ -428,14 +429,6 @@ const Index = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsAdmin(!isAdmin)}
-              className="text-xs sm:text-sm"
-            >
-              {isAdmin ? "Exit Admin" : "Admin Mode"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={handleDisconnect}
               className="text-xs sm:text-sm"
             >
@@ -560,6 +553,7 @@ const Index = () => {
           </Button>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
