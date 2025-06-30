@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useConnectModal } from 'zkwasm-minirollup-browser';
 import AdminPanel from '../components/AdminPanel';
 import MarketChart from '../components/MarketChart';
 import MarketHeader from '../components/MarketHeader';
@@ -22,6 +23,9 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("trade");
   const [landingImageUrl, setLandingImageUrl] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // RainbowKit connect modal
+  const { openConnectModal } = useConnectModal();
   
   const { 
     isConnected, 
@@ -66,32 +70,6 @@ const Index = () => {
     }
   }, [l2Account, toast]);
 
-  // Handle wallet connection (L1)
-  const handleConnectWallet = async () => {
-    console.log("Connect wallet clicked"); // Debug log
-    toast({
-      title: "Connecting...",
-      description: "Connecting to your wallet",
-    });
-    
-    try {
-      await connectL1();
-      console.log("Connect L1 completed successfully"); // Debug log
-      toast({
-        title: "Wallet Connected!",
-        description: "Successfully connected to your wallet",
-      });
-    } catch (error) {
-      console.error("Connect wallet error:", error); // Debug log
-      const errorMessage = error instanceof Error ? error.message : "Failed to connect to wallet. Please make sure you have MetaMask installed.";
-      toast({
-        title: "Connection Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    }
-  };
-
   // Handle L2 account connection
   const handleConnectL2 = async () => {
     toast({
@@ -109,6 +87,29 @@ const Index = () => {
       toast({
         title: "App Connection Failed",
         description: "Failed to connect to the prediction market app",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle wallet disconnection
+  const handleDisconnect = async () => {
+    toast({
+      title: "Disconnecting...",
+      description: "Disconnecting from wallet",
+    });
+    
+    try {
+      await disconnect();
+      toast({
+        title: "Wallet Disconnected",
+        description: "Successfully disconnected from wallet",
+      });
+    } catch (error) {
+      console.error("Disconnect error:", error);
+      toast({
+        title: "Disconnect Failed",
+        description: "Failed to disconnect from wallet",
         variant: "destructive",
       });
     }
@@ -323,10 +324,10 @@ const Index = () => {
             </div>
             
             <Button 
-              onClick={handleConnectWallet}
+              onClick={openConnectModal}
               className="w-full price-gradient-yes hover:opacity-90 animate-pulse-glow"
               size="lg"
-              disabled={isLoading}
+              disabled={isLoading || !openConnectModal}
             >
               {isLoading ? "Connecting..." : "Connect Wallet"}
             </Button>
@@ -377,7 +378,7 @@ const Index = () => {
               </Button>
               
               <Button 
-                onClick={disconnect}
+                onClick={handleDisconnect}
                 variant="outline"
                 size="sm"
                 className="w-full"
@@ -435,7 +436,7 @@ const Index = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={disconnect}
+              onClick={handleDisconnect}
               className="text-xs sm:text-sm"
             >
               Disconnect

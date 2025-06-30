@@ -101,6 +101,29 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     }
   }, [l2Account, api, apiInitializing]);
 
+  // Reset all state when wallet is disconnected
+  useEffect(() => {
+    console.log("Wallet state change:", {
+      l1Account: !!l1Account,
+      l2Account: !!l2Account,
+      willResetState: !l1Account && !l2Account
+    });
+    
+    // If both L1 and L2 accounts are disconnected, reset all state
+    if (!l1Account && !l2Account) {
+      console.log("Wallet disconnected, resetting MarketContext state...");
+      setMarketData(null);
+      setPlayerData(null);
+      setChartData([]);
+      setUserHistory(null);
+      setGlobalState(null);
+      setApi(null);
+      setPlayerInstalled(false);
+      setApiInitializing(false);
+      setIsLoading(false);
+    }
+  }, [l1Account, l2Account]);
+
   // Auto-install player when L2 is connected and API is ready
   useEffect(() => {
     console.log("Auto-install useEffect triggered:", {

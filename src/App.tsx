@@ -1,22 +1,25 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Provider } from 'react-redux';
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { DelphinusReactProvider, setProviderConfig } from 'zkwasm-minirollup-browser';
 import { store } from './app/store';
 import { Toaster as Sonner } from "./components/ui/sonner";
 import { Toaster } from "./components/ui/toaster";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { MarketProvider } from "./contexts/MarketContext";
-import { WalletProvider } from "./contexts/WalletContext";
 import Index from "./pages/Index";
 import MarketList from "./pages/MarketList";
 import NotFound from "./pages/NotFound";
+
+// Configure the provider before app initialization
+setProviderConfig({ type: 'rainbow' });
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <Provider store={store}>
-    <QueryClientProvider client={queryClient}>
-      <WalletProvider>
+    <DelphinusReactProvider appName="ZKWASM-PREDICTION-MARKET">
+      <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <TooltipProvider>
             <Toaster />
@@ -33,8 +36,8 @@ const App = () => (
             </Routes>
           </TooltipProvider>
         </BrowserRouter>
-      </WalletProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </DelphinusReactProvider>
   </Provider>
 );
 

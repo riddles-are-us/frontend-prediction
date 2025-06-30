@@ -1,32 +1,28 @@
 import { Action, configureStore, ThunkAction } from '@reduxjs/toolkit';
-import { AccountSliceReducer } from 'zkwasm-minirollup-browser';
 
+// 简单的空reducer，防止Redux报错
+const emptyReducer = (state = {}, action: any) => state;
+
+// 移除SDK Redux依赖，项目使用自己的轻量级状态管理
 export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: [
-          'account/deriveL2Account/fulfilled', 
-          'account/loginL1AccountAsync/fulfilled',
-          'acccount/deriveL2Account/fulfilled', // Note: this has a typo in the original zkwasm code
-        ],
+        // 保留一些基本的忽略配置
         ignoredActionPaths: [
           'payload.web3',
           'payload.seed', 
           'payload.injector', 
-          'payload.pubkey', // Ignore the BN pubkey object
+          'payload.pubkey',
           'meta.arg.cmd'
-        ],
-        ignoredPaths: [
-          "account/fetchAccount/fulfilled",
-          "account.l1Account.web3",
-          "account.l2account",
-          "account.l2account.pubkey" // Ignore the BN pubkey in state
         ],
       },
     }),
   reducer: {
-    account: AccountSliceReducer,
+    // 添加空reducer防止Redux报错
+    app: emptyReducer,
+    // 这里可以添加项目自己的reducers
+    // 现在暂时为空，SDK状态通过hooks管理
   },
 });
 
