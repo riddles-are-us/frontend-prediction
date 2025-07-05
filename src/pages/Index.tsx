@@ -87,7 +87,7 @@ const Index = () => {
     } catch (error) {
       toast({
         title: "App Connection Failed",
-        description: "Failed to connect to the prediction market app",
+        description: `Failed to connect to the prediction market app: ${error}`,
         variant: "destructive",
       });
     }
