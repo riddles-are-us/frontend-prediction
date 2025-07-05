@@ -350,13 +350,41 @@ const Index = () => {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="gradient-card market-glow p-8 max-w-md w-full text-center animate-fade-in">
           <div className="space-y-6">
+            {/* Landing Page Image */}
+            <div className="flex justify-center">
+              {landingImageUrl ? (
+                <img 
+                  src={landingImageUrl}
+                  alt="MEME Prediction Market"
+                  className="w-full max-w-sm h-auto rounded-lg"
+                  style={{ aspectRatio: '16/9' }}
+                  onError={(e) => {
+                    // If Sanity image fails, use placeholder
+                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgdmlld0JveD0iMCAwIDQwMCAyMjUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjI1IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMjAgMTEyLjVMMTYwIDcyLjVMMjAwIDExMi41TDI0MCA3Mi41TDI4MCAxMTIuNUwyODAgMTUyLjVMMjQwIDE1Mi41TDIwMCAxMTIuNUwxNjAgMTUyLjVMMTIwIDE1Mi41TDEyMCAxMTIuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHR4dCB4PSIyMDAiIHk9IjE4NSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNjU3Mzg0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5QcmVkaWN0aW9uIE1hcmtldDwvdGV4dD4KPC9zdmc+Cg==';
+                    e.currentTarget.alt = 'Prediction Market Placeholder';
+                  }}
+                />
+              ) : (
+                <div className="w-full max-w-sm h-auto rounded-lg bg-gradient-to-br from-primary/10 to-blue-600/10 flex items-center justify-center p-8">
+                  <div className="text-center space-y-3">
+                    <div className="text-4xl">🎯</div>
+                    <div className="text-lg font-semibold text-foreground">MEME Prediction Market</div>
+                    <div className="text-xs text-muted-foreground">powered by ZKWASM</div>
+                    <div className="text-sm text-muted-foreground">Trade on future outcomes</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
             <div className="space-y-2">
               <h1 className="text-3xl font-bold bg-gradient-to-r from-bitcoin-500 to-bull-500 bg-clip-text text-transparent">
                 Welcome Back!
               </h1>
-              <p className="text-muted-foreground">
-                Wallet connected: {l1Account?.address ? `${l1Account.address.slice(0, 6)}...${l1Account.address.slice(-4)}` : 'Unknown'}
-              </p>
+              {l1Account?.address && (
+                <p className="text-muted-foreground">
+                  Wallet connected: {l1Account.address.slice(0, 6)}...{l1Account.address.slice(-4)}
+                </p>
+              )}
             </div>
             
             <div className="space-y-4">
