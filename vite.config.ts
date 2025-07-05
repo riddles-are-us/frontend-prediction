@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -19,22 +20,23 @@ export default defineConfig(({ mode }) => {
   },
   plugins: [
     react(),
+    nodePolyfills({
+      // Whether to polyfill `node:` protocol imports.
+      protocolImports: true,
+    }),
     mode === 'development'
   ].filter(Boolean) as any[],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Node.js polyfills
-      "crypto": "crypto-browserify",
-      "stream": "stream-browserify",
-      "http": "stream-http",
-      "https": "https-browserify",
-      "os": "os-browserify/browser",
-      "process": "process/browser",
     },
   },
   define: {
     global: 'globalThis',
+    // 确保 Buffer 在全局可用
+    Buffer: 'Buffer',
+    // 确保 process 在全局可用
+    process: 'process',
     'process.env': {
       NODE_ENV: JSON.stringify(mode),
       // zkwasm-minirollup-browser expects REACT_APP_ prefix - 全部从 .env 读取
@@ -53,11 +55,7 @@ export default defineConfig(({ mode }) => {
     include: [
       'zkwasm-minirollup-browser',
       'zkwasm-minirollup-rpc', 
-      'zkwasm-service-helper',
-      'process',
-      'crypto-browserify',
-      'stream-browserify',
-      'bn.js'
+      'zkwasm-service-helper'
     ],
     esbuildOptions: {
       define: {
