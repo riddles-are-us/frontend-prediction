@@ -17,22 +17,22 @@ const queryClient = new QueryClient();
 const App = () => (
   <DelphinusReactProvider appName="ZKWASM-PREDICTION-MARKET">
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            <Route path="/" element={<MarketList />} />
-            <Route path="/:marketId" element={
-              <MarketProvider>
-                <Index />
-              </MarketProvider>
-            } />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </TooltipProvider>
-      </BrowserRouter>
+        <BrowserRouter>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/" element={<MarketList />} />
+              <Route path="/:marketId" element={
+                <MarketProvider>
+                  <Index />
+                </MarketProvider>
+              } />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
+        </BrowserRouter>
     </QueryClientProvider>
   </DelphinusReactProvider>
 );
