@@ -23,12 +23,43 @@ export default defineConfig(({ mode }) => {
     nodePolyfills({
       // Whether to polyfill `node:` protocol imports.
       protocolImports: true,
+      // Whether to polyfill specific globals.
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true,
+      },
+      // Configure polyfills for specific modules
+      include: [
+        'crypto',
+        'stream',
+        'assert',
+        'http',
+        'https',
+        'os',
+        'url',
+        'path',
+        'util',
+        'buffer',
+        'process',
+      ],
     }),
     mode === 'development'
   ].filter(Boolean) as any[],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // 添加更多 polyfill 别名，匹配 frontend-nugget 的配置
+      "crypto": "crypto-browserify",
+      "stream": "stream-browserify", 
+      "http": "stream-http",
+      "https": "https-browserify",
+      "os": "os-browserify",
+      "url": "url",
+      "path": "path-browserify",
+      "util": "util",
+      "buffer": "buffer",
+      "process": "process/browser",
     },
   },
   define: {
@@ -55,7 +86,16 @@ export default defineConfig(({ mode }) => {
     include: [
       'zkwasm-minirollup-browser',
       'zkwasm-minirollup-rpc', 
-      'zkwasm-service-helper'
+      'zkwasm-service-helper',
+      'buffer',
+      'process',
+      'crypto-browserify',
+      'stream-browserify',
+      'stream-http',
+      'https-browserify',
+      'os-browserify',
+      'url',
+      'util',
     ],
     esbuildOptions: {
       define: {
@@ -67,6 +107,14 @@ export default defineConfig(({ mode }) => {
     commonjsOptions: {
       include: [/bn\.js/, /node_modules/],
       transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      external: [],
+      output: {
+        globals: {
+          global: 'globalThis',
+        },
+      },
     },
   },
 };
