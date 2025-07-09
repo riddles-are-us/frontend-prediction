@@ -26,9 +26,7 @@ const RecentTransactions = () => {
       // Use market ID from the context - get it from URL or market data
       const marketIdFromUrl = window.location.pathname.split('/')[1];
       if (marketIdFromUrl) {
-        console.log('Fetching transactions for market:', marketIdFromUrl);
         const recentTransactions = await api.getMarketRecentTransactions(marketIdFromUrl);
-        console.log("Recent 20 transactions for market:", marketIdFromUrl, recentTransactions);
         setTransactions(recentTransactions || []);
       } else {
         console.log('No market ID found in URL');
@@ -44,19 +42,19 @@ const RecentTransactions = () => {
     }
   };
 
-  // Fetch transactions when API is ready
+  // Fetch transactions when API is ready (show loading)
   useEffect(() => {
     if (api) {
-      fetchTransactions(false); // Don't show loading for initial load
+      fetchTransactions(true);
     }
   }, [api]);
 
-  // Also fetch when global counter changes (for real-time updates)
+  // Also fetch when global counter changes (for real-time updates, no loading)
   useEffect(() => {
-    if (api && globalState?.counter !== undefined) {
-      fetchTransactions(false); // Don't show loading for background updates
+    if (api && globalState?.counter !== undefined && transactions.length > 0) {
+      fetchTransactions(false);
     }
-  }, [globalState?.counter]);
+  }, [globalState?.counter, api, transactions.length]);
 
   const getTransactionTypeLabel = (transactionType: string) => {
     switch (transactionType) {
@@ -98,8 +96,7 @@ const RecentTransactions = () => {
     return pid[0] || 'Unknown';
   };
 
-  // Only show loading if we have no data and are actually loading
-  if (loading && transactions.length === 0 && !error) {
+  if (loading && transactions.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -155,7 +152,7 @@ const RecentTransactions = () => {
       <CardContent>
         {transactions.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            {loading ? 'Loading transactions...' : 'No recent transactions found'}
+            No recent transactions found
           </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -189,13 +186,6 @@ const RecentTransactions = () => {
                 </div>
               );
             })}
-            {/* Show subtle loading indicator if updating in background */}
-            {loading && transactions.length > 0 && (
-              <div className="text-center text-xs text-muted-foreground py-2">
-                <RefreshCw className="h-3 w-3 animate-spin inline mr-1" />
-                Updating...
-              </div>
-            )}
           </div>
         )}
       </CardContent>
