@@ -155,7 +155,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
     }
   };
 
-  const quickBuyAmounts = [100, 500, 1000, 2500];
+  const quickBuyAmounts = [10000, 50000, 100000, 250000];
 
   return (
     <Card className="gradient-card animate-fade-in">
