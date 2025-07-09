@@ -53,6 +53,21 @@ const Index = () => {
     refreshData
   } = useMarket();
 
+  // Auto-connect L1 when RainbowKit connection is established
+  useEffect(() => {
+    console.log("L1 Connection check:", {
+      isConnected,
+      hasL1Account: !!l1Account,
+      l1Address: l1Account?.address,
+      shouldConnectL1: isConnected && !l1Account
+    });
+    
+    if (isConnected && !l1Account) {
+      console.log("RainbowKit connected, now connecting L1 account...");
+      connectL1();
+    }
+  }, [isConnected, l1Account, connectL1]);
+
   // Show success message when wallet connects
   useEffect(() => {
     if (l1Account) {

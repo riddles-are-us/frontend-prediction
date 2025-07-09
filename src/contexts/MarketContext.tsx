@@ -78,20 +78,25 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   const [apiInitializing, setApiInitializing] = useState(false);
   
   const walletData = useWallet();
-  const { l1Account, l2Account, playerId, setPlayerId, deposit } = walletData;
+  const { l1Account, l2Account, playerId, setPlayerId, deposit, isConnected } = walletData;
+  
+  // L1 account should now be properly connected after the fix
+  const effectiveL1Account = l1Account;
   
   // Debug: log wallet data structure only when needed
   useEffect(() => {
     console.log("MarketContext wallet data structure:", {
       hasL1Account: !!walletData.l1Account,
       hasL2Account: !!walletData.l2Account,
+      isConnected: walletData.isConnected,
       l1Address: walletData.l1Account?.address,
       l2Address: walletData.l2Account?.toHexStr?.(),
+      effectiveL1Account: !!effectiveL1Account,
       allKeys: Object.keys(walletData),
       l1AccountType: typeof walletData.l1Account,
       l2AccountType: typeof walletData.l2Account
     });
-  }, [walletData.l1Account, walletData.l2Account]);
+  }, [walletData.l1Account, walletData.l2Account, walletData.isConnected]);
   const { toast } = useToast();
 
   console.log("MarketProvider render:", {
@@ -564,8 +569,10 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       hasDeposit: !!deposit,
       l1Account: !!l1Account,
       l2Account: !!l2Account,
+      effectiveL1Account: !!effectiveL1Account,
       l1Address: l1Account?.address,
-      l2Address: l2Account?.toHexStr?.()
+      l2Address: l2Account?.toHexStr?.(),
+      isConnected
     });
 
     if (!deposit) {
@@ -599,7 +606,9 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         message: error?.message,
         stack: error?.stack,
         l1Account: !!l1Account,
-        l2Account: !!l2Account
+        l2Account: !!l2Account,
+        effectiveL1Account: !!effectiveL1Account,
+        isConnected
       });
       toast({
         title: "Deposit Failed",
@@ -617,13 +626,14 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       amount,
       l1Account: !!l1Account,
       l2Account: !!l2Account,
+      effectiveL1Account: !!effectiveL1Account,
       l1Address: l1Account?.address,
       l2Address: l2Account?.toHexStr?.(),
       hasPrivateKey: l2Account?.getPrivateKey ? true : false,
       nonce: playerData?.data?.nonce
     });
 
-    if (!l2Account || !l1Account) {
+    if (!l2Account || !effectiveL1Account) {
       throw new Error('L1 and L2 accounts are required for withdrawal');
     }
 
@@ -643,7 +653,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       const withdrawAmount = BigInt(amount);
       
       // Get withdraw transaction command
-      const cmd = getWithdrawTransactionCommandArray(nonce, withdrawAmount, l1Account);
+      const cmd = getWithdrawTransactionCommandArray(nonce, withdrawAmount, effectiveL1Account);
       
       // Send transaction
       const result = await sendTransaction({
@@ -668,6 +678,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         stack: error?.stack,
         l1Account: !!l1Account,
         l2Account: !!l2Account,
+        effectiveL1Account: !!effectiveL1Account,
         nonce: playerData?.data?.nonce
       });
       toast({
