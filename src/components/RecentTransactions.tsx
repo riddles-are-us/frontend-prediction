@@ -12,14 +12,16 @@ const RecentTransactions = () => {
   const [error, setError] = useState<string | null>(null);
   const { api, globalState } = useMarket();
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (showLoading = true) => {
     if (!api) {
       console.log('API not ready yet');
       return;
     }
     
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       setError(null);
       // Use market ID from the context - get it from URL or market data
       const marketIdFromUrl = window.location.pathname.split('/')[1];
@@ -36,21 +38,23 @@ const RecentTransactions = () => {
       console.error('Failed to fetch recent transactions:', err);
       setError(err instanceof Error ? err.message : 'Failed to load transactions');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   // Fetch transactions when API is ready
   useEffect(() => {
     if (api) {
-      fetchTransactions();
+      fetchTransactions(false); // Don't show loading for initial load
     }
   }, [api]);
 
   // Also fetch when global counter changes (for real-time updates)
   useEffect(() => {
     if (api && globalState?.counter !== undefined) {
-      fetchTransactions();
+      fetchTransactions(false); // Don't show loading for background updates
     }
   }, [globalState?.counter]);
 
@@ -94,7 +98,8 @@ const RecentTransactions = () => {
     return pid[0] || 'Unknown';
   };
 
-  if (loading && transactions.length === 0) {
+  // Only show loading if we have no data and are actually loading
+  if (loading && transactions.length === 0 && !error) {
     return (
       <Card>
         <CardHeader>
@@ -116,7 +121,7 @@ const RecentTransactions = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={fetchTransactions}
+              onClick={() => fetchTransactions(true)}
               disabled={loading}
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -140,7 +145,7 @@ const RecentTransactions = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={fetchTransactions}
+            onClick={() => fetchTransactions(true)}
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -150,7 +155,7 @@ const RecentTransactions = () => {
       <CardContent>
         {transactions.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            No recent transactions found
+            {loading ? 'Loading transactions...' : 'No recent transactions found'}
           </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -184,6 +189,13 @@ const RecentTransactions = () => {
                 </div>
               );
             })}
+            {/* Show subtle loading indicator if updating in background */}
+            {loading && transactions.length > 0 && (
+              <div className="text-center text-xs text-muted-foreground py-2">
+                <RefreshCw className="h-3 w-3 animate-spin inline mr-1" />
+                Updating...
+              </div>
+            )}
           </div>
         )}
       </CardContent>
