@@ -48,6 +48,8 @@ const Index = () => {
     claimWinnings,
     resolveMarket,
     withdrawFees,
+    depositFunds,
+    withdrawFunds,
     refreshData
   } = useMarket();
 
@@ -194,11 +196,11 @@ const Index = () => {
       return;
     }
 
-    // Note: This would need to be implemented in the API
-    toast({
-      title: "Withdrawal Initiated", 
-      description: `Withdrawing ${amount} tokens`,
-    });
+    try {
+      await withdrawFunds(amount);
+    } catch (error) {
+      console.error('Withdrawal failed:', error);
+    }
   };
 
   const handleDeposit = async (amount: number) => {
@@ -220,11 +222,11 @@ const Index = () => {
       return;
     }
 
-    // Note: This would need to be implemented in the API
-    toast({
-      title: "Deposit Initiated", 
-      description: `Depositing ${amount} tokens`,
-    });
+    try {
+      await depositFunds(amount);
+    } catch (error) {
+      console.error('Deposit failed:', error);
+    }
   };
 
   // Admin functions using real API calls

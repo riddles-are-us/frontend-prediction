@@ -1,0 +1,87 @@
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import type { L1AccountInfo } from "zkwasm-minirollup-browser";
+import {
+  createCommand,
+  createWithdrawCommand,
+  ZKWasmAppRpc,
+} from "zkwasm-minirollup-rpc";
+import { getRpcUrl, setRpcUrl } from "zkwasm-minirollup-browser";
+
+// Initialize RPC
+setRpcUrl();
+export const fullUrl = getRpcUrl();
+const rpc = new ZKWasmAppRpc(fullUrl);
+
+// Command constants
+const CMD_WITHDRAW = 2n;
+
+// Send transaction function
+export const sendTransaction = createAsyncThunk(
+  "client/sendTransaction",
+  async (
+    params: { cmd: BigUint64Array; prikey: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { cmd, prikey } = params;
+      const state: any = await rpc.sendTransaction(cmd, prikey);
+      console.log("(Data-Transaction)", state);
+      return state;
+    } catch (err: any) {
+      return rejectWithValue(err.message || "UnknownError");
+    }
+  }
+);
+
+// Get withdraw transaction command array
+export function getWithdrawTransactionCommandArray(
+  nonce: number,
+  amount: bigint,
+  account: L1AccountInfo
+): BigUint64Array {
+  console.log("withdraw address", account);
+  const address = account!.address.slice(2);
+  const command = createWithdrawCommand(
+    BigInt(nonce),
+    CMD_WITHDRAW,
+    address,
+    0n,
+    amount
+  );
+  return command;
+}
+
+// Query state function
+async function queryStateI(prikey: string) {
+  try {
+    const data: any = await rpc.queryState(prikey);
+    return JSON.parse(data.data);
+  } catch (error: any) {
+    if (error.response) {
+      if (error.response.status === 500) {
+        throw new Error("QueryStateError");
+      } else {
+        throw new Error("UnknownError");
+      }
+    } else if (error.request) {
+      throw Error(
+        "No response was received from the server, please check your network connection."
+      );
+    } else {
+      throw Error("UnknownError");
+    }
+  }
+}
+
+export const queryState = createAsyncThunk(
+  "client/queryState",
+  async (key: string, { rejectWithValue }) => {
+    try {
+      const state: any = await queryStateI(key);
+      console.log("(Data-QueryState)", state);
+      return state;
+    } catch (err: any) {
+      return rejectWithValue(err);
+    }
+  }
+); 

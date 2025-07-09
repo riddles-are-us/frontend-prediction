@@ -6,6 +6,7 @@ import { useToast } from '../hooks/use-toast';
 import PredictionMarketAPI from '../services/api';
 import { ChartDataPoint, MarketData, PlayerData, UserHistoryResponse } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
+import { getWithdrawTransactionCommandArray, sendTransaction } from '../utils/transaction';
 import { useWallet } from './WalletContext';
 
 interface GlobalState {
@@ -34,6 +35,8 @@ interface MarketContextType {
   claimWinnings: () => Promise<void>;
   resolveMarket: (outcome: boolean) => Promise<void>;
   withdrawFees: () => Promise<void>;
+  depositFunds: (amount: number) => Promise<void>;
+  withdrawFunds: (amount: number) => Promise<void>;
   refreshData: () => Promise<void>;
   loadMarketHistory: () => Promise<void>;
   loadUserHistory: () => Promise<void>;
@@ -74,7 +77,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   const [playerInstalled, setPlayerInstalled] = useState(false);
   const [apiInitializing, setApiInitializing] = useState(false);
   
-  const { l1Account, l2Account, playerId, setPlayerId } = useWallet();
+  const { l1Account, l2Account, playerId, setPlayerId, deposit } = useWallet();
   const { toast } = useToast();
 
   console.log("MarketProvider render:", {
@@ -541,6 +544,104 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     }
   };
 
+  const depositFunds = async (amount: number) => {
+    if (!l2Account || !l1Account) {
+      throw new Error('L1 and L2 accounts are required for deposit');
+    }
+
+    if (!l2Account.getPrivateKey) {
+      throw new Error('L2 account private key is required for deposit');
+    }
+
+    if (!deposit) {
+      throw new Error('Deposit function is not available');
+    }
+
+    setIsLoading(true);
+    try {
+      console.log("Depositing funds:", amount);
+      
+      // Call deposit function from wallet context
+      const result = await deposit({
+        tokenIndex: 0,
+        amount: Number(amount),
+      });
+      
+      console.log("Deposit Success:", result.hash);
+      
+      toast({
+        title: "Deposit Success",
+        description: `Successfully deposited ${amount} tokens!`,
+      });
+      
+      // Refresh data after deposit
+      await refreshData();
+    } catch (error: any) {
+      const message = `Deposit Failed: ${error?.message || "Unknown error"}`;
+      console.error(message);
+      toast({
+        title: "Deposit Failed",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const withdrawFunds = async (amount: number) => {
+    if (!l2Account || !l1Account) {
+      throw new Error('L1 and L2 accounts are required for withdrawal');
+    }
+
+    if (!l2Account.getPrivateKey) {
+      throw new Error('L2 account private key is required for withdrawal');
+    }
+
+    if (!playerData?.data?.nonce) {
+      throw new Error('Player nonce is required for withdrawal');
+    }
+
+    setIsLoading(true);
+    try {
+      console.log("Withdrawing funds:", amount);
+      
+      const nonce = parseInt(playerData.data.nonce);
+      const withdrawAmount = BigInt(amount);
+      
+      // Get withdraw transaction command
+      const cmd = getWithdrawTransactionCommandArray(nonce, withdrawAmount, l1Account);
+      
+      // Send transaction
+      const result = await sendTransaction({
+        cmd,
+        prikey: l2Account.getPrivateKey(),
+      });
+      
+      console.log("Withdraw Success:", result);
+      
+      toast({
+        title: "Withdraw Success",
+        description: `Successfully withdrew ${amount} tokens!`,
+      });
+      
+      // Refresh data after withdrawal
+      await refreshData();
+    } catch (error: any) {
+      const message = `Withdraw Error: ${error?.message || "Unknown error"}`;
+      console.error(message);
+      toast({
+        title: "Withdraw Failed",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const refreshData = async () => {
     if (!api) {
       console.warn('API not available for data refresh');
@@ -803,6 +904,8 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         claimWinnings,
         resolveMarket,
         withdrawFees,
+        depositFunds,
+        withdrawFunds,
         refreshData,
         loadMarketHistory,
         loadUserHistory
