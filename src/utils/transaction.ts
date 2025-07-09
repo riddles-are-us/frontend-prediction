@@ -20,8 +20,8 @@ export const sendTransaction = async (params: { cmd: BigUint64Array; prikey: str
     const { cmd, prikey } = params;
     console.log("Sending transaction with command:", cmd);
     console.log("Private key length:", prikey.length);
-    const state: any = await rpc.sendTransaction(cmd, prikey);
     console.log("fullUrl is", fullUrl);
+    const state: any = await rpc.sendTransaction(cmd, prikey);
     console.log("(Data-Transaction)", state);
     return state;
   } catch (err: any) {
