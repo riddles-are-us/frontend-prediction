@@ -51,7 +51,7 @@ export default defineConfig(({ mode }) => {
       "@": path.resolve(__dirname, "./src"),
       // 添加更多 polyfill 别名，匹配 frontend-nugget 的配置
       "crypto": "crypto-browserify",
-      "stream": "stream-browserify", 
+      "stream": "stream-browserify",
       "http": "stream-http",
       "https": "https-browserify",
       "os": "os-browserify",
