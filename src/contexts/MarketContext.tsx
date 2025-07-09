@@ -563,7 +563,16 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const withdrawFunds = async (amount: number) => {
-
+    console.log("Withdraw attempt:", {
+      amount,
+      l1Account: !!l1Account,
+      l2Account: !!l2Account,
+      effectiveL1Account: !!effectiveL1Account,
+      l1Address: l1Account?.address,
+      l2Address: l2Account?.toHexStr?.(),
+      hasPrivateKey: l2Account?.getPrivateKey ? true : false,
+      nonce: playerData?.data?.nonce
+    });
 
     if (!l2Account || !effectiveL1Account) {
       throw new Error('L1 and L2 accounts are required for withdrawal');
@@ -584,8 +593,16 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       const nonce = parseInt(playerData.data.nonce);
       const withdrawAmount = BigInt(amount);
       
+      console.log("Withdraw parameters:", {
+        nonce,
+        withdrawAmount: withdrawAmount.toString(),
+        effectiveL1Account
+      });
+      
       // Get withdraw transaction command
       const cmd = getWithdrawTransactionCommandArray(nonce, withdrawAmount, effectiveL1Account);
+      
+      console.log("Withdraw command created, sending transaction...");
       
       // Send transaction
       const result = await sendTransaction({

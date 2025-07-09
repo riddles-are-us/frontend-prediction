@@ -19,10 +19,18 @@ const CMD_WITHDRAW = 2n;
 export const sendTransaction = async (params: { cmd: BigUint64Array; prikey: string }) => {
   try {
     const { cmd, prikey } = params;
+    console.log("Sending transaction with command:", cmd);
+    console.log("Private key length:", prikey.length);
     const state: any = await rpc.sendTransaction(cmd, prikey);
     console.log("(Data-Transaction)", state);
     return state;
   } catch (err: any) {
+    console.error("Transaction error details:", {
+      message: err.message,
+      response: err.response,
+      status: err.response?.status,
+      data: err.response?.data
+    });
     throw new Error(err.message || "UnknownError");
   }
 };
@@ -35,6 +43,9 @@ export function getWithdrawTransactionCommandArray(
 ): BigUint64Array {
   console.log("withdraw address", account);
   const address = account!.address.slice(2);
+  console.log("address is", address);
+  console.log("address be is", Array.from(address).map(c => c.charCodeAt(0)));
+  
   const command = createWithdrawCommand(
     BigInt(nonce),
     CMD_WITHDRAW,
@@ -42,6 +53,8 @@ export function getWithdrawTransactionCommandArray(
     0n,
     amount
   );
+  
+  console.log("withdraw command created:", command);
   return command;
 }
 
