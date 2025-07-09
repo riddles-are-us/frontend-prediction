@@ -15,23 +15,17 @@ const rpc = new ZKWasmAppRpc(fullUrl);
 // Command constants
 const CMD_WITHDRAW = 2n;
 
-// Send transaction function
-export const sendTransaction = createAsyncThunk(
-  "client/sendTransaction",
-  async (
-    params: { cmd: BigUint64Array; prikey: string },
-    { rejectWithValue }
-  ) => {
-    try {
-      const { cmd, prikey } = params;
-      const state: any = await rpc.sendTransaction(cmd, prikey);
-      console.log("(Data-Transaction)", state);
-      return state;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "UnknownError");
-    }
+// Send transaction function (direct implementation without Redux)
+export const sendTransaction = async (params: { cmd: BigUint64Array; prikey: string }) => {
+  try {
+    const { cmd, prikey } = params;
+    const state: any = await rpc.sendTransaction(cmd, prikey);
+    console.log("(Data-Transaction)", state);
+    return state;
+  } catch (err: any) {
+    throw new Error(err.message || "UnknownError");
   }
-);
+};
 
 // Get withdraw transaction command array
 export function getWithdrawTransactionCommandArray(

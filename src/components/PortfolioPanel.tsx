@@ -139,16 +139,10 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
       await onWithdraw(amount);
       setWithdrawAmount('');
       setWithdrawDialogOpen(false);
-      toast({
-        title: "Withdrawal Initiated",
-        description: `Withdrawing ${amount} tokens`,
-      });
+      // Success toast is handled by MarketContext
     } catch (error) {
-      toast({
-        title: "Withdrawal Failed",
-        description: "Failed to initiate withdrawal. Please try again.",
-        variant: "destructive"
-      });
+      // Error toast is handled by MarketContext, but we can add a fallback
+      console.error('Withdrawal failed:', error);
     }
   };
 
@@ -168,16 +162,10 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
       await onDeposit(amount);
       setDepositAmount('');
       setDepositDialogOpen(false);
-      toast({
-        title: "Deposit Initiated",
-        description: `Depositing ${amount} tokens`,
-      });
+      // Success toast is handled by MarketContext
     } catch (error) {
-      toast({
-        title: "Deposit Failed",
-        description: "Failed to initiate deposit. Please try again.",
-        variant: "destructive"
-      });
+      // Error toast is handled by MarketContext, but we can add a fallback
+      console.error('Deposit failed:', error);
     }
   };
 

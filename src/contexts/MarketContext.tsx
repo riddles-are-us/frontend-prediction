@@ -545,13 +545,14 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const depositFunds = async (amount: number) => {
-    if (!l2Account || !l1Account) {
-      throw new Error('L1 and L2 accounts are required for deposit');
-    }
-
-    if (!l2Account.getPrivateKey) {
-      throw new Error('L2 account private key is required for deposit');
-    }
+    console.log("Deposit attempt:", {
+      amount,
+      hasDeposit: !!deposit,
+      l1Account: !!l1Account,
+      l2Account: !!l2Account,
+      l1Address: l1Account?.address,
+      l2Address: l2Account?.toHexStr?.()
+    });
 
     if (!deposit) {
       throw new Error('Deposit function is not available');
@@ -562,12 +563,13 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       console.log("Depositing funds:", amount);
       
       // Call deposit function from wallet context
+      // The deposit function will handle L1/L2 account validation internally
       const result = await deposit({
         tokenIndex: 0,
         amount: Number(amount),
       });
       
-      console.log("Deposit Success:", result.hash);
+      console.log("Deposit Success:", result);
       
       toast({
         title: "Deposit Success",
@@ -578,7 +580,13 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       await refreshData();
     } catch (error: any) {
       const message = `Deposit Failed: ${error?.message || "Unknown error"}`;
-      console.error(message);
+      console.error("Deposit error details:", {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        l1Account: !!l1Account,
+        l2Account: !!l2Account
+      });
       toast({
         title: "Deposit Failed",
         description: message,
@@ -591,6 +599,16 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const withdrawFunds = async (amount: number) => {
+    console.log("Withdraw attempt:", {
+      amount,
+      l1Account: !!l1Account,
+      l2Account: !!l2Account,
+      l1Address: l1Account?.address,
+      l2Address: l2Account?.toHexStr?.(),
+      hasPrivateKey: l2Account?.getPrivateKey ? true : false,
+      nonce: playerData?.data?.nonce
+    });
+
     if (!l2Account || !l1Account) {
       throw new Error('L1 and L2 accounts are required for withdrawal');
     }
@@ -630,7 +648,14 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       await refreshData();
     } catch (error: any) {
       const message = `Withdraw Error: ${error?.message || "Unknown error"}`;
-      console.error(message);
+      console.error("Withdraw error details:", {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        l1Account: !!l1Account,
+        l2Account: !!l2Account,
+        nonce: playerData?.data?.nonce
+      });
       toast({
         title: "Withdraw Failed",
         description: message,
