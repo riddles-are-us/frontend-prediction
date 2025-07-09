@@ -43,6 +43,7 @@ const Index = () => {
     marketData,
     playerData,
     isLoading,
+    isRefreshing,
     placeBet,
     sellShares,
     claimWinnings,
@@ -55,15 +56,7 @@ const Index = () => {
 
   // Auto-connect L1 when RainbowKit connection is established
   useEffect(() => {
-    console.log("L1 Connection check:", {
-      isConnected,
-      hasL1Account: !!l1Account,
-      l1Address: l1Account?.address,
-      shouldConnectL1: isConnected && !l1Account
-    });
-    
     if (isConnected && !l1Account) {
-      console.log("RainbowKit connected, now connecting L1 account...");
       connectL1();
     }
   }, [isConnected, l1Account, connectL1]);
@@ -590,11 +583,11 @@ const Index = () => {
         {/* Refresh Button */}
         <div className="flex justify-center">
           <Button
-            onClick={refreshData}
+            onClick={() => refreshData(true)}
             variant="outline"
-            disabled={isLoading}
+            disabled={isRefreshing}
           >
-            {isLoading ? "Refreshing..." : "Refresh Data"}
+            {isRefreshing ? "Refreshing..." : "Refresh Data"}
           </Button>
         </div>
       </div>

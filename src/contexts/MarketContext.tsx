@@ -27,6 +27,7 @@ interface MarketContextType {
   playerId: [string, string] | null;
   globalState: GlobalState | null;
   isLoading: boolean;
+  isRefreshing: boolean;
   api: PredictionMarketAPI | null;
   initializeAPI: () => void;
   installPlayer: () => Promise<void>;
@@ -37,7 +38,7 @@ interface MarketContextType {
   withdrawFees: () => Promise<void>;
   depositFunds: (amount: number) => Promise<void>;
   withdrawFunds: (amount: number) => Promise<void>;
-  refreshData: () => Promise<void>;
+  refreshData: (isManualRefresh?: boolean) => Promise<void>;
   loadMarketHistory: () => Promise<void>;
   loadUserHistory: () => Promise<void>;
 }
@@ -73,6 +74,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   const [userHistory, setUserHistory] = useState<UserHistoryResponse | null>(null);
   const [globalState, setGlobalState] = useState<GlobalState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [api, setApi] = useState<PredictionMarketAPI | null>(null);
   const [playerInstalled, setPlayerInstalled] = useState(false);
   const [apiInitializing, setApiInitializing] = useState(false);
@@ -83,41 +85,13 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   // L1 account should now be properly connected after the fix
   const effectiveL1Account = l1Account;
   
-  // Debug: log wallet data structure only when needed
-  useEffect(() => {
-    console.log("MarketContext wallet data structure:", {
-      hasL1Account: !!walletData.l1Account,
-      hasL2Account: !!walletData.l2Account,
-      isConnected: walletData.isConnected,
-      l1Address: walletData.l1Account?.address,
-      l2Address: walletData.l2Account?.toHexStr?.(),
-      effectiveL1Account: !!effectiveL1Account,
-      allKeys: Object.keys(walletData),
-      l1AccountType: typeof walletData.l1Account,
-      l2AccountType: typeof walletData.l2Account
-    });
-  }, [walletData.l1Account, walletData.l2Account, walletData.isConnected]);
+
   const { toast } = useToast();
 
-  console.log("MarketProvider render:", {
-    marketId,
-    l1Account: !!l1Account,
-    l2Account: !!l2Account,
-    playerId,
-    playerInstalled,
-    api: !!api,
-    apiInitializing
-  });
+
 
   // Initialize API when L2 account is available
   useEffect(() => {
-    console.log("API initialization useEffect:", {
-      l2Account: !!l2Account,
-      hasGetPrivateKey: l2Account?.getPrivateKey ? true : false,
-      api: !!api,
-      apiInitializing
-    });
-    
     if (l2Account && l2Account.getPrivateKey && !api && !apiInitializing) {
       initializeAPI();
     }
@@ -125,15 +99,8 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
 
   // Reset all state when wallet is disconnected
   useEffect(() => {
-    console.log("Wallet state change:", {
-      l1Account: !!l1Account,
-      l2Account: !!l2Account,
-      willResetState: !l1Account && !l2Account
-    });
-    
     // If both L1 and L2 accounts are disconnected, reset all state
     if (!l1Account && !l2Account) {
-      console.log("Wallet disconnected, resetting MarketContext state...");
       setMarketData(null);
       setPlayerData(null);
       setChartData([]);
@@ -148,17 +115,8 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
 
   // Auto-install player when L2 is connected and API is ready
   useEffect(() => {
-    console.log("Auto-install useEffect triggered:", {
-      l2Account: !!l2Account,
-      playerInstalled,
-      api: !!api,
-      playerId,
-      shouldInstall: l2Account && !playerInstalled && api
-    });
-    
     // If L2 is connected, API is ready, and player is not installed, install player
     if (l2Account && !playerInstalled && api) {
-      console.log("L2 account connected and API ready, auto-installing player...");
       
       // Generate player ID from L2 account's public key
       const generatePlayerIdFromL2 = (): [string, string] | null => {
@@ -234,7 +192,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       
       // Set up polling interval (every 5 seconds)
       const pollInterval = setInterval(() => {
-        refreshData();
+        refreshData(false); // false = automatic refresh
       }, 5000);
 
       return () => {
@@ -564,16 +522,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const depositFunds = async (amount: number) => {
-    console.log("Deposit attempt:", {
-      amount,
-      hasDeposit: !!deposit,
-      l1Account: !!l1Account,
-      l2Account: !!l2Account,
-      effectiveL1Account: !!effectiveL1Account,
-      l1Address: l1Account?.address,
-      l2Address: l2Account?.toHexStr?.(),
-      isConnected
-    });
+
 
     if (!deposit) {
       throw new Error('Deposit function is not available');
@@ -601,15 +550,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       await refreshData();
     } catch (error: any) {
       const message = `Deposit Failed: ${error?.message || "Unknown error"}`;
-      console.error("Deposit error details:", {
-        error,
-        message: error?.message,
-        stack: error?.stack,
-        l1Account: !!l1Account,
-        l2Account: !!l2Account,
-        effectiveL1Account: !!effectiveL1Account,
-        isConnected
-      });
+      console.error("Deposit error:", error);
       toast({
         title: "Deposit Failed",
         description: message,
@@ -622,16 +563,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const withdrawFunds = async (amount: number) => {
-    console.log("Withdraw attempt:", {
-      amount,
-      l1Account: !!l1Account,
-      l2Account: !!l2Account,
-      effectiveL1Account: !!effectiveL1Account,
-      l1Address: l1Account?.address,
-      l2Address: l2Account?.toHexStr?.(),
-      hasPrivateKey: l2Account?.getPrivateKey ? true : false,
-      nonce: playerData?.data?.nonce
-    });
+
 
     if (!l2Account || !effectiveL1Account) {
       throw new Error('L1 and L2 accounts are required for withdrawal');
@@ -672,15 +604,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       await refreshData();
     } catch (error: any) {
       const message = `Withdraw Error: ${error?.message || "Unknown error"}`;
-      console.error("Withdraw error details:", {
-        error,
-        message: error?.message,
-        stack: error?.stack,
-        l1Account: !!l1Account,
-        l2Account: !!l2Account,
-        effectiveL1Account: !!effectiveL1Account,
-        nonce: playerData?.data?.nonce
-      });
+      console.error("Withdraw error:", error);
       toast({
         title: "Withdraw Failed",
         description: message,
@@ -692,7 +616,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     }
   };
 
-  const refreshData = async () => {
+  const refreshData = async (isManualRefresh = false) => {
     if (!api) {
       console.warn('API not available for data refresh');
       return;
@@ -701,6 +625,11 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     if (!playerId || !marketId) {
       console.warn('No player ID or market ID available for data refresh');
       return;
+    }
+
+    // Set appropriate loading state
+    if (isManualRefresh) {
+      setIsRefreshing(true);
     }
 
     try {
@@ -827,6 +756,10 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
           variant: "destructive",
         });
       }
+    } finally {
+      if (isManualRefresh) {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -946,6 +879,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         playerId,
         globalState,
         isLoading,
+        isRefreshing,
         api,
         initializeAPI,
         installPlayer,
