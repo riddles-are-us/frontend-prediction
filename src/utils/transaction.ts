@@ -5,17 +5,15 @@ import {
   createWithdrawCommand,
   ZKWasmAppRpc,
 } from "zkwasm-minirollup-rpc";
-import { getRpcUrl, setRpcUrl } from "zkwasm-minirollup-browser";
-
-
-export const fullUrl = getRpcUrl();
-const rpc = new ZKWasmAppRpc(fullUrl);
+import { getRpcUrl } from "zkwasm-minirollup-browser";
 
 // Command constants
 const CMD_WITHDRAW = 2n;
 
 // Send transaction function (direct implementation without Redux)
 export const sendTransaction = async (params: { cmd: BigUint64Array; prikey: string }) => {
+  const fullUrl = getRpcUrl();
+  const rpc = new ZKWasmAppRpc(fullUrl);
   try {
     const { cmd, prikey } = params;
     console.log("Sending transaction with command:", cmd);
@@ -61,6 +59,8 @@ export function getWithdrawTransactionCommandArray(
 
 // Query state function
 async function queryStateI(prikey: string) {
+  const fullUrl = getRpcUrl();
+  const rpc = new ZKWasmAppRpc(fullUrl);
   try {
     const data: any = await rpc.queryState(prikey);
     return JSON.parse(data.data);
