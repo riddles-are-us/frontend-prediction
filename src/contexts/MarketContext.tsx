@@ -565,75 +565,27 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   };
 
   const withdrawFunds = async (amount: number) => {
-    console.log("Withdraw attempt:", {
-      amount,
-      l1Account: !!l1Account,
-      l2Account: !!l2Account,
-      effectiveL1Account: !!effectiveL1Account,
-      l1Address: l1Account?.address,
-      l2Address: l2Account?.toHexStr?.(),
-      hasPrivateKey: l2Account?.getPrivateKey ? true : false,
-      nonce: playerData?.data?.nonce
-    });
-
-    if (!l2Account || !effectiveL1Account) {
-      throw new Error('L1 and L2 accounts are required for withdrawal');
-    }
-
-    if (!l2Account.getPrivateKey) {
-      throw new Error('L2 account private key is required for withdrawal');
-    }
-
-    if (!playerData?.data?.nonce) {
-      throw new Error('Player nonce is required for withdrawal');
-    }
+    if (!api) throw new Error('API not ready');
+    if (!l2Account || !effectiveL1Account) throw new Error('L1 and L2 accounts are required for withdrawal');
+    if (!l2Account.getPrivateKey) throw new Error('L2 account private key is required for withdrawal');
+    if (!playerData?.data?.nonce) throw new Error('Player nonce is required for withdrawal');
 
     setIsLoading(true);
     try {
-      console.log("Withdrawing funds:", amount);
-      
       const nonce = parseInt(playerData.data.nonce);
-      console.log("Nonce conversion:", {
-        original: playerData.data.nonce,
-        parsed: nonce,
-        isNaN: isNaN(nonce)
-      });
-      
-      if (isNaN(nonce)) {
-        throw new Error('Invalid nonce value');
-      }
-      
+      if (isNaN(nonce)) throw new Error('Invalid nonce value');
       const withdrawAmount = BigInt(amount);
-      
-      console.log("Withdraw parameters:", {
-        nonce,
-        withdrawAmount: withdrawAmount.toString(),
-        effectiveL1Account
-      });
-      
-      // Get withdraw transaction command
-      const cmd = getWithdrawTransactionCommandArray(nonce, withdrawAmount, effectiveL1Account);
-      
-      console.log("Withdraw command created, sending transaction...");
-      
-      // Send transaction
-      const result = await sendTransaction({
-        cmd,
-        prikey: l2Account.getPrivateKey(),
-      });
-      
-      console.log("Withdraw Success:", result);
-      
+
+      // 直接调用 API
+      await api.withdrawFunds(nonce, withdrawAmount, effectiveL1Account, l2Account.getPrivateKey());
+
       toast({
         title: "Withdraw Success",
         description: `Successfully withdrew ${amount} tokens!`,
       });
-      
-      // Refresh data after withdrawal
       await refreshData();
     } catch (error: any) {
       const message = `Withdraw Error: ${error?.message || "Unknown error"}`;
-      console.error("Withdraw error:", error);
       toast({
         title: "Withdraw Failed",
         description: message,

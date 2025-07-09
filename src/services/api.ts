@@ -1,5 +1,7 @@
 import { createCommand, PlayerConvention, ZKWasmAppRpc } from 'zkwasm-minirollup-rpc';
 import { CommandType, TransactionData } from "../types/market";
+import { getWithdrawTransactionCommandArray, sendTransaction } from '../utils/transaction';
+import type { L1AccountInfo } from 'zkwasm-minirollup-browser';
 
 interface ServerConfig {
   serverUrl: string;
@@ -79,23 +81,9 @@ class PredictionMarketAPI extends PlayerConvention {
     return await this.sendTransactionWithCommand(command);
   }
 
-  // Deposit funds: DEPOSIT command
-  async depositFunds(playerId: [string, string], amount: string): Promise<any> {
-    let nonce = await this.getNonce();
-    const command = createCommand(nonce, BigInt(CommandType.DEPOSIT), [
-      BigInt(playerId[0]),
-      BigInt(playerId[1]),
-      0n,
-      BigInt(amount)
-    ]);
-    return await this.sendTransactionWithCommand(command);
-  }
-
-  // Withdraw funds: WITHDRAW command
-  async withdrawFunds(amount: string): Promise<any> {
-    let nonce = await this.getNonce();
-    const command = createCommand(nonce, BigInt(CommandType.WITHDRAW), [0n, BigInt(amount), 0n, 0n]);
-    return await this.sendTransactionWithCommand(command);
+  async withdrawFunds(nonce: number, amount: bigint, l1Account: L1AccountInfo, l2PrivateKey: string): Promise<any> {
+    const cmd = getWithdrawTransactionCommandArray(nonce, amount, l1Account);
+    return await sendTransaction({ cmd, prikey: l2PrivateKey });
   }
 
   // Query market state
