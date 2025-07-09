@@ -8,6 +8,7 @@ import { ChartDataPoint, MarketData, PlayerData, UserHistoryResponse } from '../
 import { MarketCalculations } from '../utils/market-calculations';
 import { getWithdrawTransactionCommandArray, sendTransaction } from '../utils/transaction';
 import { useWallet } from './WalletContext';
+import { getRpcUrl } from 'zkwasm-minirollup-browser';
 
 interface GlobalState {
   counter: number;
@@ -57,10 +58,10 @@ interface MarketProviderProps {
   children: ReactNode;
 }
 
-// Default server configuration
-const DEFAULT_CONFIG = {
-  serverUrl: "https://rpc.prediction.zkwasm.ai", // RPC server URL
-};
+// 移除 DEFAULT_CONFIG
+// const DEFAULT_CONFIG = {
+//   serverUrl: "https://rpc.prediction.zkwasm.ai", // RPC server URL
+// };
 
 // const DEFAULT_CONFIG = {
 //   serverUrl: "http://localhost:3000"
@@ -228,8 +229,9 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       }
     }
 
+    // 直接用 getRpcUrl() 获取 serverUrl
     const config = {
-      ...DEFAULT_CONFIG,
+      serverUrl: getRpcUrl(),
       privkey: l2Account.getPrivateKey(),
     };
 

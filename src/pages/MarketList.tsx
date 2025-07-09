@@ -8,6 +8,7 @@ import PredictionMarketAPI from '../services/api';
 import sanityService, { SanityMarket } from '../services/sanityService';
 import { getMarketStatus, MarketStatus } from '../utils/market-calculations';
 import Footer from '../components/Footer';
+import { getRpcUrl } from 'zkwasm-minirollup-browser';
 
 interface Market {
   marketId: string;
@@ -37,7 +38,7 @@ const MarketList = () => {
   useEffect(() => {
     try {
       const config = {
-        serverUrl: "https://rpc.prediction.zkwasm.ai", //"http://localhost:3000", // Use the same server URL
+        serverUrl: getRpcUrl(), //"http://localhost:3000", // Use the same server URL
         privkey: "00000000" // Dummy private key for read-only operations
       };
       // const config = {

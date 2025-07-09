@@ -7,8 +7,7 @@ import {
 } from "zkwasm-minirollup-rpc";
 import { getRpcUrl, setRpcUrl } from "zkwasm-minirollup-browser";
 
-// Initialize RPC
-setRpcUrl();
+
 export const fullUrl = getRpcUrl();
 const rpc = new ZKWasmAppRpc(fullUrl);
 
