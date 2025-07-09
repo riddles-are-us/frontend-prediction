@@ -55,7 +55,7 @@ interface MarketProviderProps {
 
 // Default server configuration
 const DEFAULT_CONFIG = {
-  serverUrl: "https://rpc.btcprediction.zkwasm.ai", // RPC server URL
+  serverUrl: "https://rpc.prediction.zkwasm.ai", // RPC server URL
 };
 
 // const DEFAULT_CONFIG = {
