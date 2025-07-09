@@ -45,6 +45,7 @@ export function getWithdrawTransactionCommandArray(
   const address = account!.address.slice(2);
   console.log("address is", address);
   console.log("address be is", Array.from(address).map(c => c.charCodeAt(0)));
+  console.log("withdraw parameters:", { nonce, amount: amount.toString() });
   
   const command = createWithdrawCommand(
     BigInt(nonce),

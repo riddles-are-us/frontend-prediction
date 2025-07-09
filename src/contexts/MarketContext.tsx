@@ -591,6 +591,16 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       console.log("Withdrawing funds:", amount);
       
       const nonce = parseInt(playerData.data.nonce);
+      console.log("Nonce conversion:", {
+        original: playerData.data.nonce,
+        parsed: nonce,
+        isNaN: isNaN(nonce)
+      });
+      
+      if (isNaN(nonce)) {
+        throw new Error('Invalid nonce value');
+      }
+      
       const withdrawAmount = BigInt(amount);
       
       console.log("Withdraw parameters:", {
