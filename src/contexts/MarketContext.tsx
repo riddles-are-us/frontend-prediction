@@ -77,7 +77,21 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
   const [playerInstalled, setPlayerInstalled] = useState(false);
   const [apiInitializing, setApiInitializing] = useState(false);
   
-  const { l1Account, l2Account, playerId, setPlayerId, deposit } = useWallet();
+  const walletData = useWallet();
+  const { l1Account, l2Account, playerId, setPlayerId, deposit } = walletData;
+  
+  // Debug: log wallet data structure only when needed
+  useEffect(() => {
+    console.log("MarketContext wallet data structure:", {
+      hasL1Account: !!walletData.l1Account,
+      hasL2Account: !!walletData.l2Account,
+      l1Address: walletData.l1Account?.address,
+      l2Address: walletData.l2Account?.toHexStr?.(),
+      allKeys: Object.keys(walletData),
+      l1AccountType: typeof walletData.l1Account,
+      l2AccountType: typeof walletData.l2Account
+    });
+  }, [walletData.l1Account, walletData.l2Account]);
   const { toast } = useToast();
 
   console.log("MarketProvider render:", {
