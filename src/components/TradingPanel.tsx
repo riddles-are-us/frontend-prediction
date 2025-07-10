@@ -41,6 +41,11 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
 
   const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
   
+  // Calculate effective prices
+  const testAmount = 100; // Small test amount
+  const yesEffectivePrice = MarketCalculations.getBuyPrice(1, testAmount, yesLiquidity, noLiquidity);
+  const noEffectivePrice = MarketCalculations.getBuyPrice(0, testAmount, yesLiquidity, noLiquidity);
+
   // Calculate trading preview
   const buyAmountNum = parseFloat(buyAmount) || 0;
   const sellSharesNum = parseFloat(sellShares) || 0;
@@ -202,7 +207,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 onClick={() => setSelectedPosition('YES')}
                 disabled={!canTrade}
               >
-                YES ({MarketCalculations.formatPrice(prices.yesPrice)})
+                YES
               </Button>
               <Button
                 variant={selectedPosition === 'NO' ? "default" : "outline"}
@@ -210,8 +215,13 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 onClick={() => setSelectedPosition('NO')}
                 disabled={!canTrade}
               >
-                NO ({MarketCalculations.formatPrice(prices.noPrice)})
+                NO
               </Button>
+            </div>
+
+            {/* Price Note */}
+            <div className="text-sm text-muted-foreground italic">
+              Note: Current price is theoretical. Actual trading price may vary due to slippage.
             </div>
 
             {/* Quick Buy Amounts */}
@@ -263,7 +273,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 <div className="flex justify-between">
                   <span>Effective Price:</span>
                   <span className="font-medium">
-                    {sharesReceived > 0 ? MarketCalculations.formatPrice(amountAfterFees / sharesReceived) : "0%"}
+                    {sharesReceived > 0 ? (amountAfterFees / sharesReceived).toFixed(3) : "0"}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -372,14 +382,14 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                   <span className="font-medium">{sellAmount.toFixed(2)} tokens</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Platform Fee (1%):</span>
-                  <span className="font-medium">{sellFees.toFixed(2)} tokens</span>
-                </div>
-                <div className="flex justify-between">
                   <span>Effective Price:</span>
                   <span className="font-medium">
-                    {MarketCalculations.formatPrice(sellAmountAfterFees / sellSharesNum)}
+                    {sellSharesNum > 0 ? (sellAmount / sellSharesNum).toFixed(3) : "0"}
                   </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Platform Fee (1%):</span>
+                  <span className="font-medium">{sellFees.toFixed(2)} tokens</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold">

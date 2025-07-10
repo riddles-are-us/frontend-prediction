@@ -41,11 +41,18 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
   // Provide default values to handle undefined market data
   const yesLiquidity = BigInt(market.yes_liquidity || 0);
   const noLiquidity = BigInt(market.no_liquidity || 0);
-  const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
+  
+  // Calculate effective prices
+  const testAmount = 100; // Small test amount
+  const yesEffectivePrice = MarketCalculations.getBuyPrice(1, testAmount, yesLiquidity, noLiquidity);
+  const noEffectivePrice = MarketCalculations.getBuyPrice(0, testAmount, yesLiquidity, noLiquidity);
 
-  // Calculate current position value
-  const yesValue = yesShares * prices.yesPrice;
-  const noValue = noShares * prices.noPrice;
+  // Calculate current position value using actual sell prices
+  const yesValue = yesShares > 0 ? 
+    MarketCalculations.calculateAmountForShares(1, yesShares, yesLiquidity, noLiquidity) : 0;
+  const noValue = noShares > 0 ? 
+    MarketCalculations.calculateAmountForShares(0, noShares, yesLiquidity, noLiquidity) : 0;
+
   const totalPortfolioValue = balance + yesValue + noValue;
 
   // Calculate potential winnings if market resolves
@@ -59,14 +66,14 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
       type: 'YES' as const,
       shares: yesShares,
       currentValue: yesValue,
-      currentPrice: prices.yesPrice,
+      currentPrice: yesShares > 0 ? yesValue / yesShares : 0,
       color: 'bull'
     },
     {
       type: 'NO' as const,
       shares: noShares,
       currentValue: noValue,
-      currentPrice: prices.noPrice,
+      currentPrice: noShares > 0 ? noValue / noShares : 0,
       color: 'bear'
     }
   ];
@@ -218,7 +225,7 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                   <div className="text-right">
                     <div className="font-semibold">{currentValue.toFixed(2)} tokens</div>
                     <div className="text-sm text-muted-foreground">
-                      @ {MarketCalculations.formatPrice(currentPrice)}
+                      @ {currentPrice.toFixed(3)}
                     </div>
                   </div>
                 </div>

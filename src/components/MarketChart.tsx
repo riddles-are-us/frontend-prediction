@@ -2,7 +2,7 @@ import { TrendingUp } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useMarket } from '../contexts/MarketContext';
-import { MarketData } from '../types/market';
+import { MarketData, TransactionData } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
@@ -11,36 +11,63 @@ interface MarketChartProps {
 }
 
 const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
-  const { chartData, loadMarketHistory, globalState } = useMarket();
+  const { chartData, loadMarketHistory, globalState, api } = useMarket();
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [lastLoadedCounter, setLastLoadedCounter] = useState<number>(0);
+  const [recentTransactions, setRecentTransactions] = useState<TransactionData[]>([]);
 
-  // Load market history when component mounts or when global counter changes
+  // Load market history and recent transactions
   useEffect(() => {
-    if (globalState && globalState.counter !== undefined) {
+    if (globalState && globalState.counter !== undefined && api) {
       const currentCounter = globalState.counter;
-      // Load history if:
-      // 1. First time loading (lastLoadedCounter === 0 and currentCounter >= 0)
-      // 2. Counter has changed (update chart every counter change)
       if (lastLoadedCounter === 0 || currentCounter !== lastLoadedCounter) {
-        console.log(`Loading market history for global counter ${currentCounter} (last loaded: ${lastLoadedCounter})`);
+        console.log(`Loading market history for global counter ${currentCounter}`);
+        
+        // Load market history
         loadMarketHistory().then(() => {
           setLastLoadedCounter(currentCounter);
         }).catch((error) => {
           console.error('Failed to load market history:', error);
         });
+
+        // Load recent transactions
+        const marketId = window.location.pathname.split('/')[1];
+        if (marketId) {
+          api.getMarketRecentTransactions(marketId).then((transactions) => {
+            setRecentTransactions(transactions || []);
+          }).catch((error) => {
+            console.error('Failed to load recent transactions:', error);
+          });
+        }
       }
     }
-  }, [globalState?.counter]); // Only depend on global counter, not loadMarketHistory
+  }, [globalState?.counter]);
 
-  // Update current time every minute to refresh chart timestamps
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 60000);
+  // Get latest transaction prices
+  const getLatestPrices = (transactions: TransactionData[]) => {
+    let latestYesPrice = 1.0;
+    let latestNoPrice = 1.0;
+    
+    // Find latest YES transaction
+    const latestYesTx = transactions.find(tx => 
+      tx.transactionType === 'BET_YES' || tx.transactionType === 'SELL_YES'
+    );
+    if (latestYesTx) {
+      // Calculate raw price without fees
+      latestYesPrice = Number(latestYesTx.amount) / Number(latestYesTx.shares);
+    }
 
-    return () => clearInterval(interval);
-  }, []);
+    // Find latest NO transaction
+    const latestNoTx = transactions.find(tx => 
+      tx.transactionType === 'BET_NO' || tx.transactionType === 'SELL_NO'
+    );
+    if (latestNoTx) {
+      // Calculate raw price without fees
+      latestNoPrice = Number(latestNoTx.amount) / Number(latestNoTx.shares);
+    }
+
+    return { latestYesPrice, latestNoPrice };
+  };
 
   // Transform chart data for recharts format
   const transformedChartData = useMemo(() => {
@@ -48,10 +75,12 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
     
     if (!chartData || chartData.length === 0) {
       console.log('MarketChart - Using fallback to current market prices');
-      // Fallback to current market prices if no historical data
-      const yesLiquidity = BigInt(market.yes_liquidity || 0);
-      const noLiquidity = BigInt(market.no_liquidity || 0);
-      const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
+      
+      // Calculate prices using current liquidity
+      const yesAmount = MarketCalculations.calculateAmountForShares(1, 1000, BigInt(market.yes_liquidity), BigInt(market.no_liquidity));
+      const noAmount = MarketCalculations.calculateAmountForShares(0, 1000, BigInt(market.yes_liquidity), BigInt(market.no_liquidity));
+      const yesPrice = yesAmount / 1000;
+      const noPrice = noAmount / 1000;
       
       return [{
         time: new Date().toLocaleTimeString('en-US', { 
@@ -60,8 +89,8 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           hour12: false 
         }),
         counter: globalState?.counter || 0,
-        yesPrice: prices.yesPrice * 100,
-        noPrice: prices.noPrice * 100,
+        yesPrice: yesPrice,
+        noPrice: noPrice,
         fullTime: new Date().toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -75,10 +104,14 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
     console.log('MarketChart - Using historical chart data with', chartData.length, 'points');
     
     return chartData.map((point) => {
-      // Calculate approximate timestamp based on counter
-      // Assuming each counter represents 5 seconds
       const counterInterval = 5; // seconds
       const approximateTimestamp = Date.now() - ((globalState?.counter || 0) - point.counter) * counterInterval * 1000;
+      
+      // Calculate prices using point's liquidity
+      const yesAmount = MarketCalculations.calculateAmountForShares(1, 1000, BigInt(point.yesLiquidity), BigInt(point.noLiquidity));
+      const noAmount = MarketCalculations.calculateAmountForShares(0, 1000, BigInt(point.yesLiquidity), BigInt(point.noLiquidity));
+      const yesPrice = yesAmount / 1000;
+      const noPrice = noAmount / 1000;
       
       return {
         time: new Date(approximateTimestamp).toLocaleTimeString('en-US', { 
@@ -87,8 +120,8 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           hour12: false 
         }),
         counter: point.counter,
-        yesPrice: point.yesPrice * 100, // Convert to percentage
-        noPrice: point.noPrice * 100,   // Convert to percentage
+        yesPrice: yesPrice,
+        noPrice: noPrice,
         fullTime: new Date(approximateTimestamp).toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -147,7 +180,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           <p className="text-sm text-muted-foreground mb-2">{dataPoint.fullTime || label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
-              {entry.dataKey === 'yesPrice' ? 'YES' : 'NO'}: {entry.value.toFixed(1)}%
+              {entry.dataKey === 'yesPrice' ? 'YES' : 'NO'}: {entry.value.toFixed(3)}
             </p>
           ))}
         </div>
@@ -167,11 +200,11 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           <div className="flex gap-4 text-sm">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-bull-500 rounded-full"></div>
-              <span>YES {yesTrend > 0 ? '↗' : yesTrend < 0 ? '↘' : '→'} {latestData.yesPrice.toFixed(1)}%</span>
+              <span>YES {yesTrend > 0 ? '↗' : yesTrend < 0 ? '↘' : '→'} {(latestData.yesPrice).toFixed(3)}</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-bear-500 rounded-full"></div>
-              <span>NO {noTrend > 0 ? '↗' : noTrend < 0 ? '↘' : '→'} {latestData.noPrice.toFixed(1)}%</span>
+              <span>NO {noTrend > 0 ? '↗' : noTrend < 0 ? '↘' : '→'} {(latestData.noPrice).toFixed(3)}</span>
             </div>
           </div>
         </CardTitle>
@@ -196,35 +229,29 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
                 stroke="#6b7280"
                 fontSize={12}
                 interval="preserveStartEnd"
-                tickFormatter={(value, index) => {
-                  // Show every 12th tick to avoid crowding
-                  const dataLength = transformedChartData.length;
-                  const interval = Math.floor(Math.max(1, dataLength / 6)); // Show about 6 labels across the chart
-                  return index % interval === 0 ? value : '';
-                }}
               />
-              <YAxis 
+              <YAxis
+                domain={[0, 2]}
+                tickFormatter={(value) => value.toFixed(2)}
                 stroke="#6b7280"
                 fontSize={12}
-                domain={[0, 100]}
-                tickFormatter={(value) => `${value}%`}
               />
               <Tooltip content={<CustomTooltip />} />
               <Area
                 type="monotone"
                 dataKey="yesPrice"
                 stroke="#22c55e"
-                strokeWidth={2}
+                fillOpacity={1}
                 fill="url(#yesGradient)"
-                fillOpacity={0.6}
+                strokeWidth={2}
               />
               <Area
                 type="monotone"
                 dataKey="noPrice"
                 stroke="#ef4444"
-                strokeWidth={2}
+                fillOpacity={1}
                 fill="url(#noGradient)"
-                fillOpacity={0.6}
+                strokeWidth={2}
               />
             </AreaChart>
           </ResponsiveContainer>
