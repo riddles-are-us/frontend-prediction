@@ -41,11 +41,6 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
 
   const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
   
-  // Calculate effective prices
-  const testAmount = 100; // Small test amount
-  const yesEffectivePrice = MarketCalculations.getBuyPrice(1, testAmount, yesLiquidity, noLiquidity);
-  const noEffectivePrice = MarketCalculations.getBuyPrice(0, testAmount, yesLiquidity, noLiquidity);
-
   // Calculate trading preview
   const buyAmountNum = parseFloat(buyAmount) || 0;
   const sellSharesNum = parseFloat(sellShares) || 0;

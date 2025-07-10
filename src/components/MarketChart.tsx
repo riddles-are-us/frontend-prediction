@@ -2,7 +2,7 @@ import { TrendingUp } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useMarket } from '../contexts/MarketContext';
-import { MarketData, TransactionData } from '../types/market';
+import { MarketData } from '../types/market';
 import { MarketCalculations } from '../utils/market-calculations';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
@@ -11,63 +11,25 @@ interface MarketChartProps {
 }
 
 const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
-  const { chartData, loadMarketHistory, globalState, api } = useMarket();
+  const { chartData, loadMarketHistory, globalState } = useMarket();
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [lastLoadedCounter, setLastLoadedCounter] = useState<number>(0);
-  const [recentTransactions, setRecentTransactions] = useState<TransactionData[]>([]);
 
-  // Load market history and recent transactions
+  // Load market history
   useEffect(() => {
-    if (globalState && globalState.counter !== undefined && api) {
+    if (globalState && globalState.counter !== undefined) {
       const currentCounter = globalState.counter;
       if (lastLoadedCounter === 0 || currentCounter !== lastLoadedCounter) {
         console.log(`Loading market history for global counter ${currentCounter}`);
         
-        // Load market history
         loadMarketHistory().then(() => {
           setLastLoadedCounter(currentCounter);
         }).catch((error) => {
           console.error('Failed to load market history:', error);
         });
-
-        // Load recent transactions
-        const marketId = window.location.pathname.split('/')[1];
-        if (marketId) {
-          api.getMarketRecentTransactions(marketId).then((transactions) => {
-            setRecentTransactions(transactions || []);
-          }).catch((error) => {
-            console.error('Failed to load recent transactions:', error);
-          });
-        }
       }
     }
   }, [globalState?.counter]);
-
-  // Get latest transaction prices
-  const getLatestPrices = (transactions: TransactionData[]) => {
-    let latestYesPrice = 1.0;
-    let latestNoPrice = 1.0;
-    
-    // Find latest YES transaction
-    const latestYesTx = transactions.find(tx => 
-      tx.transactionType === 'BET_YES' || tx.transactionType === 'SELL_YES'
-    );
-    if (latestYesTx) {
-      // Calculate raw price without fees
-      latestYesPrice = Number(latestYesTx.amount) / Number(latestYesTx.shares);
-    }
-
-    // Find latest NO transaction
-    const latestNoTx = transactions.find(tx => 
-      tx.transactionType === 'BET_NO' || tx.transactionType === 'SELL_NO'
-    );
-    if (latestNoTx) {
-      // Calculate raw price without fees
-      latestNoPrice = Number(latestNoTx.amount) / Number(latestNoTx.shares);
-    }
-
-    return { latestYesPrice, latestNoPrice };
-  };
 
   // Transform chart data for recharts format
   const transformedChartData = useMemo(() => {
@@ -230,11 +192,11 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
                 fontSize={12}
                 interval="preserveStartEnd"
               />
-              <YAxis
+              <YAxis 
                 domain={[0, 2]}
-                tickFormatter={(value) => value.toFixed(2)}
                 stroke="#6b7280"
                 fontSize={12}
+                tickFormatter={(value) => value.toFixed(2)}
               />
               <Tooltip content={<CustomTooltip />} />
               <Area
@@ -256,7 +218,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        
+
         <div className="mt-4 grid grid-cols-3 gap-4 text-center">
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Volume</div>

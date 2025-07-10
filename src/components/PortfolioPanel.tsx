@@ -42,11 +42,6 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
   const yesLiquidity = BigInt(market.yes_liquidity || 0);
   const noLiquidity = BigInt(market.no_liquidity || 0);
   
-  // Calculate effective prices
-  const testAmount = 100; // Small test amount
-  const yesEffectivePrice = MarketCalculations.getBuyPrice(1, testAmount, yesLiquidity, noLiquidity);
-  const noEffectivePrice = MarketCalculations.getBuyPrice(0, testAmount, yesLiquidity, noLiquidity);
-
   // Calculate current position value using actual sell prices
   const yesValue = yesShares > 0 ? 
     MarketCalculations.calculateAmountForShares(1, yesShares, yesLiquidity, noLiquidity) : 0;
