@@ -38,11 +38,11 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
     if (!chartData || chartData.length === 0) {
       console.log('MarketChart - Using fallback to current market prices');
       
-      // Calculate prices using current liquidity
-      const yesAmount = MarketCalculations.calculateAmountForShares(1, 1000, BigInt(market.yes_liquidity), BigInt(market.no_liquidity));
-      const noAmount = MarketCalculations.calculateAmountForShares(0, 1000, BigInt(market.yes_liquidity), BigInt(market.no_liquidity));
-      const yesPrice = yesAmount / 1000;
-      const noPrice = noAmount / 1000;
+      // Calculate prices using current liquidity with sell algorithm
+      const yesAmount = MarketCalculations.calculateAmountForShares(1, 100, BigInt(market.yes_liquidity), BigInt(market.no_liquidity));
+      const noAmount = MarketCalculations.calculateAmountForShares(0, 100, BigInt(market.yes_liquidity), BigInt(market.no_liquidity));
+      const yesPrice = yesAmount / 100;
+      const noPrice = noAmount / 100;
       
       return [{
         time: new Date().toLocaleTimeString('en-US', { 
@@ -69,11 +69,11 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
       const counterInterval = 5; // seconds
       const approximateTimestamp = Date.now() - ((globalState?.counter || 0) - point.counter) * counterInterval * 1000;
       
-      // Calculate prices using point's liquidity
-      const yesAmount = MarketCalculations.calculateAmountForShares(1, 1000, BigInt(point.yesLiquidity), BigInt(point.noLiquidity));
-      const noAmount = MarketCalculations.calculateAmountForShares(0, 1000, BigInt(point.yesLiquidity), BigInt(point.noLiquidity));
-      const yesPrice = yesAmount / 1000;
-      const noPrice = noAmount / 1000;
+      // Calculate prices using point's liquidity with sell algorithm
+      const yesAmount = MarketCalculations.calculateAmountForShares(1, 100, BigInt(point.yesLiquidity), BigInt(point.noLiquidity));
+      const noAmount = MarketCalculations.calculateAmountForShares(0, 100, BigInt(point.yesLiquidity), BigInt(point.noLiquidity));
+      const yesPrice = yesAmount / 100;
+      const noPrice = noAmount / 100;
       
       return {
         time: new Date(approximateTimestamp).toLocaleTimeString('en-US', { 
