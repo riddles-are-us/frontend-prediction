@@ -37,13 +37,15 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
     
     if (!chartData || chartData.length === 0) {
       console.log('MarketChart - Using fallback to current market prices');
-      
-      // Calculate prices using current liquidity with sell algorithm
-      const yesAmount = MarketCalculations.calculateAmountForShares(1, 100, BigInt(market.yes_liquidity), BigInt(market.no_liquidity));
-      const noAmount = MarketCalculations.calculateAmountForShares(0, 100, BigInt(market.yes_liquidity), BigInt(market.no_liquidity));
-      const yesPrice = yesAmount / 100;
-      const noPrice = noAmount / 100;
-      
+      // Fallback to current market prices if no historical data (LMSR)
+
+      const b = BigInt(market.b || "0");
+
+      const qYes = BigInt(market.totalYesShares || "0");
+
+      const qNo  = BigInt(market.totalNoShares  || "0");
+
+      const prices = MarketCalculations.calculatePrices(qYes, qNo, b);
       return [{
         time: new Date().toLocaleTimeString('en-US', { 
           hour: '2-digit', 
@@ -51,8 +53,8 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           hour12: false 
         }),
         counter: globalState?.counter || 0,
-        yesPrice: yesPrice,
-        noPrice: noPrice,
+        yesPrice: prices.yesPrice,
+        noPrice: prices.noPrice,
         fullTime: new Date().toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -70,8 +72,8 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
       const approximateTimestamp = Date.now() - ((globalState?.counter || 0) - point.counter) * counterInterval * 1000;
       
       // Calculate prices using point's liquidity with sell algorithm
-      const yesAmount = MarketCalculations.calculateAmountForShares(1, 100, BigInt(point.yesLiquidity), BigInt(point.noLiquidity));
-      const noAmount = MarketCalculations.calculateAmountForShares(0, 100, BigInt(point.yesLiquidity), BigInt(point.noLiquidity));
+      const yesAmount = MarketCalculations.calculateAmountForShares(1, 100, BigInt(point.yesLiquidity), BigInt(point.noLiquidity), BigInt(market.b) );
+      const noAmount = MarketCalculations.calculateAmountForShares(0, 100, BigInt(point.yesLiquidity), BigInt(point.noLiquidity), BigInt(market.b) );
       const yesPrice = yesAmount / 100;
       const noPrice = noAmount / 100;
       
@@ -82,8 +84,8 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           hour12: false 
         }),
         counter: point.counter,
-        yesPrice: yesPrice,
-        noPrice: noPrice,
+        yesPrice: point.yesPrice * 100, // Already computed upstream using LMSR
+        noPrice: point.noPrice * 100,
         fullTime: new Date(approximateTimestamp).toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -133,14 +135,14 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
   // Get latest data for display
   const latestData = transformedChartData[transformedChartData.length - 1];
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: { active: boolean; payload: { payload: { counter: number; fullTime: string; yesPrice: number; noPrice: number }; dataKey: string; value: number; color: string }[]; label: string }) => {
     if (active && payload && payload.length) {
       const dataPoint = payload[0].payload;
       return (
         <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
           <p className="font-medium mb-2">Counter: {dataPoint.counter}</p>
           <p className="text-sm text-muted-foreground mb-2">{dataPoint.fullTime || label}</p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry: { dataKey: string; value: number; color: string }, index: number) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
               {entry.dataKey === 'yesPrice' ? 'YES' : 'NO'}: {entry.value.toFixed(3)}
             </p>
@@ -198,7 +200,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
                 fontSize={12}
                 tickFormatter={(value) => value.toFixed(2)}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip active={true} payload={[]} label="" />} />
               <Area
                 type="monotone"
                 dataKey="yesPrice"
@@ -223,7 +225,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Volume</div>
             <div className="font-semibold">
-              {MarketCalculations.formatNumber(Number(market.total_volume || 0))}
+              {MarketCalculations.formatNumber(Number(market.totalVolume || 0))}
             </div>
           </div>
           <div className="space-y-1">
@@ -231,8 +233,8 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
             <div className="font-semibold">
               {MarketCalculations.formatNumber(
                 MarketCalculations.getTotalLiquidity(
-                  BigInt(market.yes_liquidity || 0), 
-                  BigInt(market.no_liquidity || 0)
+                  BigInt(market.totalYesShares || 0), 
+                  BigInt(market.totalNoShares  || 0)
                 )
               )}
             </div>
@@ -240,7 +242,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Fees Collected</div>
             <div className="font-semibold">
-              {MarketCalculations.formatNumber(Number(market.total_fees_collected || 0))}
+              {MarketCalculations.formatNumber(Number(market.totalFeesCollected || 0))}
             </div>
           </div>
         </div>
