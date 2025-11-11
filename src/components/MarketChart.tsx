@@ -48,11 +48,15 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
     
     if (!chartData || chartData.length === 0) {
       console.log('MarketChart - Using fallback to current market prices');
-      // Fallback to current market prices if no historical data
-      const yesLiquidity = BigInt(market.yes_liquidity || 0);
-      const noLiquidity = BigInt(market.no_liquidity || 0);
-      const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
-      
+      // Fallback to current market prices if no historical data (LMSR)
+
+      const b = BigInt(market.b || "0");
+
+      const qYes = BigInt(market.totalYesShares || "0");
+
+      const qNo  = BigInt(market.totalNoShares  || "0");
+
+      const prices = MarketCalculations.calculatePrices(qYes, qNo, b);
       return [{
         time: new Date().toLocaleTimeString('en-US', { 
           hour: '2-digit', 
@@ -87,8 +91,8 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           hour12: false 
         }),
         counter: point.counter,
-        yesPrice: point.yesPrice * 100, // Convert to percentage
-        noPrice: point.noPrice * 100,   // Convert to percentage
+        yesPrice: point.yesPrice * 100, // Already computed upstream using LMSR
+        noPrice: point.noPrice * 100,
         fullTime: new Date(approximateTimestamp).toLocaleString('en-US', {
           month: 'short',
           day: 'numeric',
@@ -234,7 +238,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Volume</div>
             <div className="font-semibold">
-              {MarketCalculations.formatNumber(Number(market.total_volume || 0))}
+              {MarketCalculations.formatNumber(Number(market.totalVolume || 0))}
             </div>
           </div>
           <div className="space-y-1">
@@ -242,8 +246,8 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
             <div className="font-semibold">
               {MarketCalculations.formatNumber(
                 MarketCalculations.getTotalLiquidity(
-                  BigInt(market.yes_liquidity || 0), 
-                  BigInt(market.no_liquidity || 0)
+                  BigInt(market.totalYesShares || 0), 
+                  BigInt(market.totalNoShares  || 0)
                 )
               )}
             </div>
@@ -251,7 +255,7 @@ const MarketChart: React.FC<MarketChartProps> = ({ market }) => {
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Fees Collected</div>
             <div className="font-semibold">
-              {MarketCalculations.formatNumber(Number(market.total_fees_collected || 0))}
+              {MarketCalculations.formatNumber(Number(market.totalFeesCollected || 0))}
             </div>
           </div>
         </div>

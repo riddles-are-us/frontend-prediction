@@ -12,9 +12,12 @@ import Footer from '../components/Footer';
 interface Market {
   marketId: string;
   titleString: string;
-  yesLiquidity: string;
-  noLiquidity: string;
-  prizePool: string;
+  totalYesShares: string;
+  totalNoShares: string;
+  poolBalance: string;
+  b: string;
+  yesPrice?: number | string;
+  noPrice?: number | string;
   totalVolume: string;
   resolved: boolean;
   outcome?: boolean;
@@ -95,19 +98,36 @@ const MarketList = () => {
     }
   }, [api]);
 
-  const calculatePrice = (yesLiq: string, noLiq: string) => {
-    const yes = parseFloat(yesLiq);
-    const no = parseFloat(noLiq);
-    const total = yes + no;
-    if (total === 0) return { yesPrice: 50, noPrice: 50 };
-    return {
-      yesPrice: Math.round((no / total) * 100),
-      noPrice: Math.round((yes / total) * 100)
-    };
+  // Prefer backend prices; fallback: approximate LMSR from shares+b (UI-only)
+  const calculatePrice = (m: Market) => {
+    const fromBackend =
+      (m.yesPrice !== undefined && m.noPrice !== undefined)
+        ? {
+            yesPrice: Math.round(Number(m.yesPrice) * 100),
+            noPrice: Math.round(Number(m.noPrice) * 100),
+          }
+        : null;
+    if (fromBackend && isFinite(fromBackend.yesPrice) && isFinite(fromBackend.noPrice)) return fromBackend;
+
+    // Fallback: very light LMSR approx to avoid importing heavy math here
+    const qYes = BigInt(m.totalYesShares || '0');
+    const qNo  = BigInt(m.totalNoShares || '0');
+    const b    = BigInt(m.b || '1');
+    if (b === 0n) return { yesPrice: 50, noPrice: 50 };
+    // exp(q/b) ~ 1 + x; UI-only roughness is OK
+    const PRICE_SCALE = 1_000_000n;
+    const expYes = PRICE_SCALE + (qYes * PRICE_SCALE) / b;
+    const expNo  = PRICE_SCALE + (qNo  * PRICE_SCALE) / b;
+    const sum = Number(expYes + expNo);
+    if (sum <= 0) return { yesPrice: 50, noPrice: 50 };
+    const yes = Number(expYes) / sum;
+    const no  = 1 - yes;
+    return { yesPrice: Math.round(yes * 100), noPrice: Math.round(no * 100) };
   };
 
-  const formatNumber = (num: string) => {
-    return parseInt(num).toLocaleString();
+  const formatNumber = (num: string | number) => {
+    const n = typeof num === 'string' ? parseInt(num) : num;
+    return (Number.isFinite(n) ? n : 0).toLocaleString();
   };
 
   const getMarketStatusForDisplay = (market: Market) => {
@@ -175,7 +195,7 @@ const MarketList = () => {
         {/* Markets Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {markets.map((market) => {
-            const prices = calculatePrice(market.yesLiquidity, market.noLiquidity);
+            const prices = calculatePrice(market);
             return (
               <Link key={market.marketId} to={`/${market.marketId}`}>
                 <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
@@ -225,9 +245,9 @@ const MarketList = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
                           <DollarSign className="h-4 w-4" />
-                          <span>Prize Pool</span>
+                          <span>Pool Balance</span>
                         </div>
-                        <span className="font-medium">{formatNumber(market.prizePool)}</span>
+                        <span className="font-medium">{formatNumber(market.poolBalance)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
@@ -239,10 +259,10 @@ const MarketList = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
                           <Trophy className="h-4 w-4" />
-                          <span>Liquidity</span>
+                          <span>Total Shares</span>
                         </div>
                         <span className="font-medium">
-                          {formatNumber((parseInt(market.yesLiquidity) + parseInt(market.noLiquidity)).toString())}
+                          {formatNumber((parseInt(market.totalYesShares) + parseInt(market.totalNoShares)).toString())}
                         </span>
                       </div>
                     </div>

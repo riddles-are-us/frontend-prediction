@@ -608,13 +608,21 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         
         const parsedMarketData: MarketData = {
           titleString: marketFromResponse.titleString || "Untitled Market",
-          yes_liquidity: marketFromResponse.yesLiquidity?.toString() || "0",
-          no_liquidity: marketFromResponse.noLiquidity?.toString() || "0", 
-          total_volume: marketFromResponse.totalVolume?.toString() || "0",
-          resolved: marketFromResponse.resolved || false,
+          totalYesShares: (marketFromResponse.totalYesShares ?? marketFromResponse.total_yes_shares ?? 0).toString(),
+          totalNoShares: (marketFromResponse.totalNoShares ?? marketFromResponse.total_no_shares ?? 0).toString(),
+          poolBalance: (marketFromResponse.poolBalance ?? marketFromResponse.pool_balance ?? 0).toString(),
+          b: (marketFromResponse.b ?? 0).toString(),
+          totalVolume: (marketFromResponse.totalVolume ?? marketFromResponse.total_volume ?? 0).toString(),
+          resolved: !!marketFromResponse.resolved,
           outcome: marketFromResponse.outcome,
-          total_fees_collected: marketFromResponse.totalFeesCollected?.toString() || "0",
-          // Add time-related fields
+          totalFeesCollected: (marketFromResponse.totalFeesCollected ?? marketFromResponse.total_fees_collected ?? 0).toString(),
+          yesPrice: typeof marketFromResponse.yesPrice === 'number'
+            ? marketFromResponse.yesPrice
+            : (marketFromResponse.yes_price ? Number(marketFromResponse.yes_price) : undefined),
+          noPrice: typeof marketFromResponse.noPrice === 'number'
+            ? marketFromResponse.noPrice
+            : (marketFromResponse.no_price ? Number(marketFromResponse.no_price) : undefined),
+          // Time
           counter: currentCounter,
           start_time: startTime,
           end_time: endTime,
@@ -696,21 +704,31 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         
         // Convert to chart data format and calculate prices
         const chartPoints: ChartDataPoint[] = historyData.map((entry: any) => {
-          const yesLiq = parseFloat(entry.yesLiquidity);
-          const noLiq = parseFloat(entry.noLiquidity);
-          const yesLiqBig = BigInt(Math.floor(yesLiq));
-          const noLiqBig = BigInt(Math.floor(noLiq));
-          
-          // Use MarketCalculations for consistent price calculation
-          const prices = MarketCalculations.calculatePrices(yesLiqBig, noLiqBig);
-          
+          const qYes = BigInt(entry.totalYesShares ?? entry.total_yes_shares ?? 0);
+          const qNo  = BigInt(entry.totalNoShares  ?? entry.total_no_shares  ?? 0);
+          const bVal = BigInt(entry.b ?? (marketData?.b ?? '1'));
+
+          // Prefer server prices if supplied in the history row
+          let yesP = entry.yesPrice ?? entry.yes_price;
+          let noP  = entry.noPrice ?? entry.no_price;
+
+          if (yesP === undefined || noP === undefined) {
+            // Light LMSR approximation for chart (keeps UI responsive)
+            const SCALE = 1_000_000n;
+            const expYes = SCALE + (qYes * SCALE) / (bVal === 0n ? 1n : bVal);
+            const expNo  = SCALE + (qNo  * SCALE) / (bVal === 0n ? 1n : bVal);
+            const sum = Number(expYes + expNo) || 1;
+            yesP = Number(expYes) / sum;
+            noP  = 1 - yesP;
+          }
+
           return {
-            counter: parseInt(entry.counter),
-            yesPrice: prices.yesPrice,
-            noPrice: prices.noPrice,
-            yesLiquidity: yesLiq,
-            noLiquidity: noLiq,
-            timestamp: new Date().toISOString(), // You might want to calculate actual timestamp based on counter
+            counter: parseInt(entry.counter ?? entry.t ?? '0'),
+            yesPrice: Number(yesP),
+            noPrice: Number(noP),
+            yesLiquidity: Number(qYes), // legacy keys consumed by chart
+            noLiquidity: Number(qNo),
+            timestamp: new Date().toISOString(),
           };
         });
         

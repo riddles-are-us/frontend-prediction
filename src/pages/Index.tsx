@@ -249,19 +249,19 @@ const Index = () => {
     // This would need to be implemented in the API
   };
 
-  // Calculate market percentages from real data
+  // Calculate market percentages using LMSR prices provided by backend (or computed in context)
   const getMarketPercentages = () => {
     if (!marketData) return { yesPercentage: 50, noPercentage: 50 };
-    
-    const yesLiq = parseFloat(marketData.yes_liquidity);
-    const noLiq = parseFloat(marketData.no_liquidity);
-    const total = yesLiq + noLiq;
-    
-    if (total === 0) return { yesPercentage: 50, noPercentage: 50 };
-    
+    const yes = typeof marketData.yesPrice === 'number'
+      ? marketData.yesPrice
+      : parseFloat(String(marketData.yesPrice || 0));
+    const no = typeof marketData.noPrice === 'number'
+      ? marketData.noPrice
+      : parseFloat(String(marketData.noPrice || 0));
+    if (!isFinite(yes) || !isFinite(no)) return { yesPercentage: 50, noPercentage: 50 };
     return {
-      yesPercentage: Math.round((noLiq / total) * 100), // Price is inverse of liquidity
-      noPercentage: Math.round((yesLiq / total) * 100)
+      yesPercentage: Math.round(yes * 100),
+      noPercentage: Math.round(no * 100),
     };
   };
 

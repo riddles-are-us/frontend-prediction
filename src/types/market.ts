@@ -2,12 +2,21 @@
 export interface MarketData {
   titleString: string;
   description?: string;
-  yes_liquidity: string;
-  no_liquidity: string;
-  total_volume: string;
+  /** LMSR outstanding shares */
+  totalYesShares: string;
+  totalNoShares: string;
+  /** Running pool/token balance managed by the contract (bankroll/backing) */
+  poolBalance: string;
+  /** LMSR liquidity parameter */
+  b: string;
+  /** Cumulative volume */
+  totalVolume?: string;
   resolved: boolean;
-  outcome: boolean;
-  total_fees_collected: string;
+  outcome: boolean | null;
+  totalFeesCollected?: string;
+  /** Optional prices (0..1) if backend provides them; otherwise computed client-side */
+  yesPrice?: number;
+  noPrice?: number;
   // Time-related fields
   counter?: number;
   start_time?: number;
@@ -96,8 +105,12 @@ export enum CommandType {
 export interface MarketHistoryEntry {
   counter: string;
   __v: number;
-  noLiquidity: string;
-  yesLiquidity: string;
+  /** For history we keep legacy keys, but they represent LMSR shares now */
+  yesLiquidity: string; // = totalYesShares at that counter
+  noLiquidity: string;  // = totalNoShares  at that counter
+  b?: string;
+  yesPrice?: number;
+  noPrice?: number;
 }
 
 export interface MarketHistoryResponse {
@@ -126,8 +139,9 @@ export interface ChartDataPoint {
   counter: number;
   yesPrice: number;
   noPrice: number;
-  yesLiquidity: number;
-  noLiquidity: number;
+  /** For charts, keep the legacy names but store LMSR shares in them */
+  yesLiquidity: number; // shares
+  noLiquidity: number;  // shares
   timestamp?: string;
 }
 
