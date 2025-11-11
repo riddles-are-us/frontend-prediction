@@ -767,31 +767,53 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       if (historyData && historyData.length > 0) {
         console.log('Market history loaded:', historyData.length, 'entries');
         
-        // Convert to chart data format and calculate prices
+        // Convert to chart data format and calculate LMSR prices (fallback if server didn't send them)
         const chartPoints: ChartDataPoint[] = historyData.map((entry: any) => {
-          const qYes = BigInt(entry.totalYesShares ?? entry.total_yes_shares ?? 0);
-          const qNo  = BigInt(entry.totalNoShares  ?? entry.total_no_shares  ?? 0);
-          const bVal = BigInt(entry.b ?? (marketData?.b ?? '1'));
+          // Accept multiple possible field names from server/legacy
+          const qYes = BigInt(
+            entry.totalYesShares ??
+            entry.total_yes_shares ??
+            entry.yesLiquidity ??
+            entry.yes_liquidity ??
+            0
+          );
+          const qNo = BigInt(
+            entry.totalNoShares ??
+            entry.total_no_shares ??
+            entry.noLiquidity ??
+            entry.no_liquidity ??
+            0
+          );
+          let bVal = BigInt(
+            entry.b ??
+            (marketData?.b ?? '0')
+          );
+          if (bVal === 0n) bVal = 1n; // guard to avoid div-by-zero in LMSR math
 
-          // Prefer server prices if supplied in the history row
-          let yesP = entry.yesPrice ?? entry.yes_price;
-          let noP  = entry.noPrice ?? entry.no_price;
-
-          if (yesP === undefined || noP === undefined) {
-            // Light LMSR approximation for chart (keeps UI responsive)
-            const SCALE = 1_000_000n;
-            const expYes = SCALE + (qYes * SCALE) / (bVal === 0n ? 1n : bVal);
-            const expNo  = SCALE + (qNo  * SCALE) / (bVal === 0n ? 1n : bVal);
-            const sum = Number(expYes + expNo) || 1;
-            yesP = Number(expYes) / sum;
-            noP  = 1 - yesP;
+          // Prefer server-computed prices if provided; else compute with true LMSR
+          let yesP: number | undefined = entry.yesPrice ?? entry.yes_price;
+          let noP: number | undefined  = entry.noPrice ?? entry.no_price;
+          if (
+            typeof yesP !== 'number' ||
+            typeof noP !== 'number' ||
+            !isFinite(yesP) ||
+            !isFinite(noP)
+          ) {
+            const prices = MarketCalculations.calculatePrices(qYes, qNo, bVal);
+            yesP = prices.yesPrice;
+            noP  = prices.noPrice;
           }
 
+          // Clamp defensively
+          yesP = Math.max(0, Math.min(1, Number(yesP)));
+          noP  = Math.max(0, Math.min(1, Number(noP)));
+
           return {
-            counter: parseInt(entry.counter ?? entry.t ?? '0'),
-            yesPrice: Number(yesP),
-            noPrice: Number(noP),
-            yesLiquidity: Number(qYes), // legacy keys consumed by chart
+            counter: parseInt(String(entry.counter ?? entry.t ?? '0')),
+            yesPrice: yesP!,
+            noPrice: noP!,
+            // Keep legacy names for chart consumption; they now represent LMSR shares
+            yesLiquidity: Number(qYes),
             noLiquidity: Number(qNo),
             timestamp: new Date().toISOString(),
           };
