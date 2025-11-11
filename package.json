@@ -47,7 +47,7 @@
     "cmdk": "^1.0.0",
     "crypto-browserify": "^3.12.1",
     "date-fns": "^3.6.0",
-    "delphinus-curves": "github:DelphinusLab/delphinus-curves",
+    "delphinus-curves": "github:DelphinusLab/delphinus-curves#xgao",
     "embla-carousel-react": "^8.3.0",
     "https-browserify": "^1.0.0",
     "input-otp": "^1.2.4",
@@ -70,7 +70,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.3",
     "zkwasm-minirollup-browser": "github:DelphinusLab/zkWasm-minirollup-browser",
-    "zkwasm-minirollup-rpc": "github:DelphinusLab/zkWasm-minirollup-rpc",
+    "zkwasm-minirollup-rpc": "github:DelphinusLab/zkWasm-minirollup-rpc#52bd36c3d6f31c152175016a1d5e3a910738a1ae",
     "zkwasm-service-helper": "github:DelphinusLab/zkWasm-service-helper",
     "zod": "^3.23.8"
   },
@@ -99,6 +99,7 @@
     "url": "^0.11.4",
     "util": "^0.12.5",
     "vite": "^5.4.1",
-    "vite-plugin-node-polyfills": "^0.23.0"
-  }
+    "vite-plugin-node-polyfills": "^0.24.0"
+  },
+  "packageManager": "pnpm@10.21.0+sha512.da3337267e400fdd3d479a6c68079ac6db01d8ca4f67572083e722775a796788a7a9956613749e000fac20d424b594f7a791a5f4e2e13581c5ef947f26968a40"
 }
