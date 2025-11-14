@@ -20,6 +20,21 @@ class PredictionMarketAPI extends PlayerConvention {
     this.processingKey = config.privkey;
   }
 
+  private normalizeMarket(m: any) {
+    if (!m) return m;
+    return {
+      ...m,
+      totalYesShares: m.totalYesShares ?? m.total_yes_shares ?? "0",
+      totalNoShares:  m.totalNoShares  ?? m.total_no_shares  ?? "0",
+      poolBalance:    m.poolBalance    ?? m.pool_balance     ?? "0",
+      totalVolume:    m.totalVolume    ?? m.total_volume     ?? "0",
+      totalFeesCollected: m.totalFeesCollected ?? m.total_fees_collected ?? "0",
+      b: m.b ?? "0",
+      yesPrice: (m.yesPrice ?? m.yes_price),
+      noPrice:  (m.noPrice  ?? m.no_price),
+    };
+  }
+
   async sendTransactionWithCommand(cmd: BigUint64Array) {
     try {
       let result = await this.rpc.sendTransaction(cmd, this.processingKey);
@@ -207,7 +222,7 @@ class PredictionMarketAPI extends PlayerConvention {
       if (!result.success) {
         throw new Error(result.message || 'Failed to get markets');
       }
-      return result.data;
+      return (result.data || []).map((m: any) => this.normalizeMarket(m));
     } catch (error) {
       console.error('Failed to get all markets:', error);
       throw error;
@@ -222,7 +237,7 @@ class PredictionMarketAPI extends PlayerConvention {
       if (!result.success) {
         throw new Error(result.message || 'Failed to get market');
       }
-      return result.data;
+      return this.normalizeMarket(result.data);
     } catch (error) {
       console.error('Failed to get market:', error);
       throw error;

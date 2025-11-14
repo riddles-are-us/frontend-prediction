@@ -669,13 +669,21 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         
         const parsedMarketData: MarketData = {
           titleString: marketFromResponse.titleString || "Untitled Market",
-          yes_liquidity: marketFromResponse.yesLiquidity?.toString() || "0",
-          no_liquidity: marketFromResponse.noLiquidity?.toString() || "0", 
-          total_volume: marketFromResponse.totalVolume?.toString() || "0",
-          resolved: marketFromResponse.resolved || false,
+          totalYesShares: (marketFromResponse.totalYesShares ?? marketFromResponse.total_yes_shares ?? 0).toString(),
+          totalNoShares: (marketFromResponse.totalNoShares ?? marketFromResponse.total_no_shares ?? 0).toString(),
+          poolBalance: (marketFromResponse.poolBalance ?? marketFromResponse.pool_balance ?? 0).toString(),
+          b: (marketFromResponse.b ?? 0).toString(),
+          totalVolume: (marketFromResponse.totalVolume ?? marketFromResponse.total_volume ?? 0).toString(),
+          resolved: !!marketFromResponse.resolved,
           outcome: marketFromResponse.outcome,
-          total_fees_collected: marketFromResponse.totalFeesCollected?.toString() || "0",
-          // Add time-related fields
+          totalFeesCollected: (marketFromResponse.totalFeesCollected ?? marketFromResponse.total_fees_collected ?? 0).toString(),
+          yesPrice: typeof marketFromResponse.yesPrice === 'number'
+            ? marketFromResponse.yesPrice
+            : (marketFromResponse.yes_price ? Number(marketFromResponse.yes_price) : undefined),
+          noPrice: typeof marketFromResponse.noPrice === 'number'
+            ? marketFromResponse.noPrice
+            : (marketFromResponse.no_price ? Number(marketFromResponse.no_price) : undefined),
+          // Time
           counter: currentCounter,
           start_time: startTime,
           end_time: endTime,
@@ -759,23 +767,55 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       if (historyData && historyData.length > 0) {
         console.log('Market history loaded:', historyData.length, 'entries');
         
-        // Convert to chart data format and calculate prices
+        // Convert to chart data format and calculate LMSR prices (fallback if server didn't send them)
         const chartPoints: ChartDataPoint[] = historyData.map((entry: any) => {
-          const yesLiq = parseFloat(entry.yesLiquidity);
-          const noLiq = parseFloat(entry.noLiquidity);
-          const yesLiqBig = BigInt(Math.floor(yesLiq));
-          const noLiqBig = BigInt(Math.floor(noLiq));
-          
-          // Use MarketCalculations for consistent price calculation
-          const prices = MarketCalculations.calculatePrices(yesLiqBig, noLiqBig);
-          
+          // Accept multiple possible field names from server/legacy
+          const qYes = BigInt(
+            entry.totalYesShares ??
+            entry.total_yes_shares ??
+            entry.yesLiquidity ??
+            entry.yes_liquidity ??
+            0
+          );
+          const qNo = BigInt(
+            entry.totalNoShares ??
+            entry.total_no_shares ??
+            entry.noLiquidity ??
+            entry.no_liquidity ??
+            0
+          );
+          let bVal = BigInt(
+            entry.b ??
+            (marketData?.b ?? '0')
+          );
+          if (bVal === 0n) bVal = 1n; // guard to avoid div-by-zero in LMSR math
+
+          // Prefer server-computed prices if provided; else compute with true LMSR
+          let yesP: number | undefined = entry.yesPrice ?? entry.yes_price;
+          let noP: number | undefined  = entry.noPrice ?? entry.no_price;
+          if (
+            typeof yesP !== 'number' ||
+            typeof noP !== 'number' ||
+            !isFinite(yesP) ||
+            !isFinite(noP)
+          ) {
+            const prices = MarketCalculations.calculatePrices(qYes, qNo, bVal);
+            yesP = prices.yesPrice;
+            noP  = prices.noPrice;
+          }
+
+          // Clamp defensively
+          yesP = Math.max(0, Math.min(1, Number(yesP)));
+          noP  = Math.max(0, Math.min(1, Number(noP)));
+
           return {
-            counter: parseInt(entry.counter),
-            yesPrice: prices.yesPrice,
-            noPrice: prices.noPrice,
-            yesLiquidity: yesLiq,
-            noLiquidity: noLiq,
-            timestamp: new Date().toISOString(), // You might want to calculate actual timestamp based on counter
+            counter: parseInt(String(entry.counter ?? entry.t ?? '0')),
+            yesPrice: yesP!,
+            noPrice: noP!,
+            // Keep legacy names for chart consumption; they now represent LMSR shares
+            yesLiquidity: Number(qYes),
+            noLiquidity: Number(qNo),
+            timestamp: new Date().toISOString(),
           };
         });
         
