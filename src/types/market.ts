@@ -1,12 +1,18 @@
-// Market and AMM types for the prediction market
+// Market and LMSR types for the prediction market
 export interface MarketData {
+  marketId?: string;
   titleString: string;
   description?: string;
-  yes_liquidity: string;
-  no_liquidity: string;
+  // LMSR state = outstanding shares
+  yes_liquidity: string; // totalYesShares
+  no_liquidity: string;  // totalNoShares
+  // LMSR liquidity parameter b (market depth)
+  b?: string;
+  // Collateral in the LMSR market
+  poolBalance?: string;
   total_volume: string;
   resolved: boolean;
-  outcome: boolean;
+  outcome: boolean | null;
   total_fees_collected: string;
   // Time-related fields
   counter?: number;
@@ -89,7 +95,8 @@ export enum CommandType {
   SELL = 5,
   RESOLVE = 6,
   CLAIM = 7,
-  WITHDRAW_FEES = 8
+  WITHDRAW_FEES = 8,
+  CREATE_MARKET = 9
 }
 
 // Historical data types

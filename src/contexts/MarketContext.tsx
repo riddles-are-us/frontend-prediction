@@ -230,11 +230,15 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     }
 
     // 直接用 getRpcUrl() 获取 serverUrl
-    const config = {
-      serverUrl: getRpcUrl(),
-      privkey: l2Account.getPrivateKey(),
-    };
+    // const config = {
+    //   serverUrl: getRpcUrl(),
+    //   privkey: l2Account.getPrivateKey(),
+    // };
 
+    const config = {
+      serverUrl: "http://172.23.84.199:3000", // Use the same server URL
+      privkey: "00000000" // Dummy private key for read-only operations
+    };
     console.log('Initializing real API connection to:', config.serverUrl);
     const apiInstance = new PredictionMarketAPI(config);
     setApi(apiInstance);
@@ -468,8 +472,11 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
 
     setIsLoading(true);
     try {
-      console.log("Resolving market via API:", { outcome });
-      const response = await api.resolveMarket(outcome);
+      if (!marketId) {
+        throw new Error('Market ID is required to resolve market');
+      }
+      console.log("Resolving market via API:", { marketId, outcome });
+      const response = await api.resolveMarket(marketId, outcome);
       console.log("Resolve response:", response);
       
       toast({
@@ -499,8 +506,11 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
 
     setIsLoading(true);
     try {
-      console.log("Withdrawing fees via API...");
-      const response = await api.withdrawFees();
+      if (!marketId) {
+        throw new Error('Market ID is required to withdraw fees');
+      }
+      console.log("Withdrawing fees via API for market:", marketId);
+      const response = await api.withdrawFees(marketId);
       console.log("Withdraw fees response:", response);
       
       toast({
@@ -668,9 +678,12 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         );
         
         const parsedMarketData: MarketData = {
+          marketId: marketFromResponse.marketId?.toString(),
           titleString: marketFromResponse.titleString || "Untitled Market",
-          yes_liquidity: marketFromResponse.yesLiquidity?.toString() || "0",
-          no_liquidity: marketFromResponse.noLiquidity?.toString() || "0", 
+          yes_liquidity: marketFromResponse.totalYesShares?.toString() || marketFromResponse.yesLiquidity?.toString() || "0",
+          no_liquidity: marketFromResponse.totalNoShares?.toString() || marketFromResponse.noLiquidity?.toString() || "0", 
+          b: marketFromResponse.b?.toString() || "1000000", // Default b = 1,000,000
+          poolBalance: marketFromResponse.poolBalance?.toString() || "0",
           total_volume: marketFromResponse.totalVolume?.toString() || "0",
           resolved: marketFromResponse.resolved || false,
           outcome: marketFromResponse.outcome,
@@ -766,8 +779,10 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
           const yesLiqBig = BigInt(Math.floor(yesLiq));
           const noLiqBig = BigInt(Math.floor(noLiq));
           
-          // Use MarketCalculations for consistent price calculation
-          const prices = MarketCalculations.calculatePrices(yesLiqBig, noLiqBig);
+          // Use MarketCalculations for consistent price calculation with LMSR
+          // Get b parameter from current market data or use default
+          const b = marketData?.b ? BigInt(marketData.b) : BigInt(1000000);
+          const prices = MarketCalculations.calculatePrices(yesLiqBig, noLiqBig, b);
           
           return {
             counter: parseInt(entry.counter),

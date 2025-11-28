@@ -89,7 +89,8 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
   // Provide default values to handle undefined market data
   const yesLiquidity = BigInt(market.yes_liquidity || 0);
   const noLiquidity = BigInt(market.no_liquidity || 0);
-  const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
+  const b = BigInt(market.b || "1000000"); // LMSR liquidity parameter
+  const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity, b);
   const totalLiquidity = MarketCalculations.getTotalLiquidity(yesLiquidity, noLiquidity);
 
   // Test price calculation with unequal liquidity (for debugging)
@@ -97,15 +98,17 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
     console.log('MarketHeader - Equal liquidity detected:', {
       yesLiquidity: yesLiquidity.toString(),
       noLiquidity: noLiquidity.toString(),
+      b: b.toString(),
       yesPrice: prices.yesPrice,
       noPrice: prices.noPrice,
       yesChance: (prices.yesPrice * 100).toFixed(1) + '%',
       noChance: (prices.noPrice * 100).toFixed(1) + '%'
     });
     
-    // Test with different liquidity to verify calculation
-    const testPrices = MarketCalculations.calculatePrices(BigInt(800000), BigInt(1200000));
-    console.log('MarketHeader - Test with unequal liquidity (800K YES, 1200K NO):', {
+    // Test with different liquidity to verify LMSR calculation
+    const testB = BigInt(1000000);
+    const testPrices = MarketCalculations.calculatePrices(BigInt(800000), BigInt(1200000), testB);
+    console.log('MarketHeader - Test with unequal liquidity (800K YES, 1200K NO, b=1M):', {
       yesPrice: testPrices.yesPrice,
       noPrice: testPrices.noPrice,
       yesChance: (testPrices.yesPrice * 100).toFixed(1) + '%',

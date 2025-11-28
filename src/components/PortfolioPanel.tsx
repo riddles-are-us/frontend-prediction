@@ -41,12 +41,13 @@ const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
   // Provide default values to handle undefined market data
   const yesLiquidity = BigInt(market.yes_liquidity || 0);
   const noLiquidity = BigInt(market.no_liquidity || 0);
+  const b = BigInt(market.b || "1000000"); // LMSR liquidity parameter
   
-  // Calculate current position value using actual sell prices
+  // Calculate current position value using LMSR sell prices
   const yesValue = yesShares > 0 ? 
-    MarketCalculations.calculateAmountForShares(1, yesShares, yesLiquidity, noLiquidity) : 0;
+    MarketCalculations.calculateAmountForShares(1, yesShares, yesLiquidity, noLiquidity, b) : 0;
   const noValue = noShares > 0 ? 
-    MarketCalculations.calculateAmountForShares(0, noShares, yesLiquidity, noLiquidity) : 0;
+    MarketCalculations.calculateAmountForShares(0, noShares, yesLiquidity, noLiquidity, b) : 0;
 
   const totalPortfolioValue = balance + yesValue + noValue;
 

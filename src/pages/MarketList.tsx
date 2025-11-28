@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import PredictionMarketAPI from '../services/api';
 import sanityService, { SanityMarket } from '../services/sanityService';
-import { getMarketStatus, MarketStatus } from '../utils/market-calculations';
+import { getMarketStatus, MarketStatus, MarketCalculations } from '../utils/market-calculations';
 import Footer from '../components/Footer';
 import { getRpcUrl } from 'zkwasm-minirollup-browser';
 
@@ -15,6 +15,7 @@ interface Market {
   titleString: string;
   yesLiquidity: string;
   noLiquidity: string;
+  b?: string; // LMSR liquidity parameter
   prizePool: string;
   totalVolume: string;
   resolved: boolean;
@@ -37,14 +38,14 @@ const MarketList = () => {
   // Initialize API for market list (doesn't need wallet connection)
   useEffect(() => {
     try {
-      const config = {
-        serverUrl: getRpcUrl(), //"http://localhost:3000", // Use the same server URL
-        privkey: "00000000" // Dummy private key for read-only operations
-      };
       // const config = {
-      //   serverUrl: "http://localhost:3000", // Use the same server URL
+      //   serverUrl: getRpcUrl(), //"http://localhost:3000", // Use the same server URL
       //   privkey: "00000000" // Dummy private key for read-only operations
       // };
+      const config = {
+        serverUrl: "http://172.23.84.199:3000", // Use the same server URL
+        privkey: "00000000" // Dummy private key for read-only operations
+      };
       const apiInstance = new PredictionMarketAPI(config);
       setApi(apiInstance);
     } catch (error) {
@@ -70,12 +71,15 @@ const MarketList = () => {
       // Update current counter from global state
       const counter = globalStateResponse?.state?.counter || 0;
       setCurrentCounter(counter);
-      
       // Merge backend markets with Sanity data
       const mergedMarkets = backendMarkets.map((backendMarket: any) => {
         const sanityMarket = sanityMarkets.find((sm: any) => sm.id.toString() === backendMarket.marketId);
         return {
           ...backendMarket,
+          // Map backend field names to frontend interface
+          yesLiquidity: backendMarket.totalYesShares?.toString() || backendMarket.yesLiquidity || "0",
+          noLiquidity: backendMarket.totalNoShares?.toString() || backendMarket.noLiquidity || "0",
+          b: backendMarket.b?.toString() || "1000000", // Default b = 1,000,000
           landingUrl: sanityMarket?.landingUrl,
           sanityData: sanityMarket
         };
@@ -96,14 +100,15 @@ const MarketList = () => {
     }
   }, [api]);
 
-  const calculatePrice = (yesLiq: string, noLiq: string) => {
-    const yes = parseFloat(yesLiq);
-    const no = parseFloat(noLiq);
-    const total = yes + no;
-    if (total === 0) return { yesPrice: 50, noPrice: 50 };
+  const calculatePrice = (yesLiq: string, noLiq: string, b: string = "1000000") => {
+    const yes = BigInt(yesLiq);
+    const no = BigInt(noLiq);
+    const bBig = BigInt(b);
+    // Use LMSR price calculation
+    const prices = MarketCalculations.calculatePrices(yes, no, bBig);
     return {
-      yesPrice: Math.round((no / total) * 100),
-      noPrice: Math.round((yes / total) * 100)
+      yesPrice: Math.round(prices.yesPrice * 10000) / 100,
+      noPrice: Math.round(prices.noPrice * 10000) / 100,
     };
   };
 
@@ -176,7 +181,8 @@ const MarketList = () => {
         {/* Markets Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {markets.map((market) => {
-            const prices = calculatePrice(market.yesLiquidity, market.noLiquidity);
+            const b = market.b || "1000000"; // Default b = 1,000,000
+            const prices = calculatePrice(market.yesLiquidity, market.noLiquidity, b);
             return (
               <Link key={market.marketId} to={`/${market.marketId}`}>
                 <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">

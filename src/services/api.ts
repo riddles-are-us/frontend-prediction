@@ -67,17 +67,17 @@ class PredictionMarketAPI extends PlayerConvention {
     return await this.sendTransactionWithCommand(command);
   }
 
-  // Resolve market (admin only): RESOLVE command
-  async resolveMarket(outcome: boolean): Promise<any> {
+  // Resolve market (admin only): RESOLVE command (updated to include marketId)
+  async resolveMarket(marketId: string, outcome: boolean): Promise<any> {
     let nonce = await this.getNonce();
-    const command = createCommand(nonce, BigInt(CommandType.RESOLVE), [outcome ? 1n : 0n]);
+    const command = createCommand(nonce, BigInt(CommandType.RESOLVE), [BigInt(marketId), outcome ? 1n : 0n]);
     return await this.sendTransactionWithCommand(command);
   }
 
-  // Withdraw fees (admin only): WITHDRAW_FEES command
-  async withdrawFees(): Promise<any> {
+  // Withdraw fees (admin only): WITHDRAW_FEES command (updated to include marketId)
+  async withdrawFees(marketId: string): Promise<any> {
     let nonce = await this.getNonce();
-    const command = createCommand(nonce, BigInt(CommandType.WITHDRAW_FEES), []);
+    const command = createCommand(nonce, BigInt(CommandType.WITHDRAW_FEES), [BigInt(marketId)]);
     return await this.sendTransactionWithCommand(command);
   }
 
