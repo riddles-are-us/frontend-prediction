@@ -11,7 +11,7 @@ const UserHistory: React.FC = () => {
     if (api && playerId) {
       loadUserHistory();
     }
-  }, [api, playerId, loadUserHistory]);
+  }, [api, playerId]);
 
   const formatBetType = (betType: number) => {
     if (betType === 11) return 'Sell YES';

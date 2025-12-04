@@ -35,28 +35,30 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
   // Provide default values to handle undefined market data
   const yesLiquidity = BigInt(market.yes_liquidity || 0);
   const noLiquidity = BigInt(market.no_liquidity || 0);
+  const b = BigInt(market.b || "1000000"); // LMSR liquidity parameter, default 1,000,000
   const balance = Number(playerData.data.balance);
   const yesShares = Number(playerData.data.yes_shares);
   const noShares = Number(playerData.data.no_shares);
 
-  const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity);
+  const prices = MarketCalculations.calculatePrices(yesLiquidity, noLiquidity, b);
   
   // Calculate trading preview
   const buyAmountNum = parseFloat(buyAmount) || 0;
   const sellSharesNum = parseFloat(sellShares) || 0;
   const betType = selectedPosition === 'YES' ? 1 : 0;
 
-  // Calculate fees first (1% of total amount)
+  // Pass total amount to calculateSharesForBet - it calculates fees internally (matching backend API)
+  const sharesReceived = buyAmountNum > 0 ? 
+    MarketCalculations.calculateSharesForBet(betType, buyAmountNum, yesLiquidity, noLiquidity, b) : 0;
+  console.log('shares for bet received', sharesReceived);
+  // Calculate fees for display (1% of total amount)
   const fees = buyAmountNum > 0 ? MarketCalculations.calculateFees(buyAmountNum) : 0;
   
-  // Amount actually used for buying shares (after deducting fees)
+  // Amount actually used for buying shares (after deducting fees) - for display only
   const amountAfterFees = buyAmountNum - fees;
-
-  const sharesReceived = amountAfterFees > 0 ? 
-    MarketCalculations.calculateSharesForBet(betType, amountAfterFees, yesLiquidity, noLiquidity) : 0;
   
   const sellAmount = sellSharesNum > 0 ? 
-    MarketCalculations.calculateAmountForShares(betType, sellSharesNum, yesLiquidity, noLiquidity) : 0;
+    MarketCalculations.calculateAmountForShares(betType, sellSharesNum, yesLiquidity, noLiquidity, b) : 0;
 
   // Calculate fees for selling (1% of the gross amount)
   const sellFees = sellAmount > 0 ? MarketCalculations.calculateFees(sellAmount) : 0;
@@ -64,8 +66,9 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
   // Net amount after deducting fees
   const sellAmountAfterFees = sellAmount - sellFees;
 
-  const buyImpact = amountAfterFees > 0 ? 
-    MarketCalculations.calculateMarketImpact(betType, amountAfterFees, yesLiquidity, noLiquidity) : null;
+  // Pass total amount to calculateMarketImpact - it calculates fees internally
+  const buyImpact = buyAmountNum > 0 ? 
+    MarketCalculations.calculateMarketImpact(betType, buyAmountNum, yesLiquidity, noLiquidity, b) : null;
 
   const handleBuy = async () => {
     if (!buyAmount || buyAmountNum <= 0) {
@@ -268,7 +271,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ market, playerData, onTrade
                 <div className="flex justify-between">
                   <span>Effective Price:</span>
                   <span className="font-medium">
-                    {sharesReceived > 0 ? (amountAfterFees / sharesReceived).toFixed(3) : "0"}
+                    {sharesReceived > 0 ? (buyAmountNum / sharesReceived).toFixed(3) : "0"}
                   </span>
                 </div>
                 <div className="flex justify-between">
