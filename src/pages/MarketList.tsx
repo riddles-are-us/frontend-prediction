@@ -16,7 +16,7 @@ interface Market {
   yesLiquidity: string;
   noLiquidity: string;
   b?: string; // LMSR liquidity parameter
-  prizePool: string;
+  poolBalance: string;
   totalVolume: string;
   resolved: boolean;
   outcome?: boolean;
@@ -236,7 +236,7 @@ const MarketList = () => {
                           <DollarSign className="h-4 w-4" />
                           <span>Prize Pool</span>
                         </div>
-                        <span className="font-medium">{formatNumber(market.prizePool)}</span>
+                        <span className="font-medium">{formatNumber(market.poolBalance)}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">

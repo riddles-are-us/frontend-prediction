@@ -13,7 +13,6 @@ interface MarketHeaderProps {
 const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
   const [liveTimeRemaining, setLiveTimeRemaining] = useState<string>(market.time_remaining || "Loading...");
   const [landingImageUrl, setLandingImageUrl] = useState<string | null>(null);
-  const [marketDescription, setMarketDescription] = useState<string | null>(null);
 
   // Fetch market data from Sanity (including landing image and description)
   useEffect(() => {
@@ -22,17 +21,9 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
         // Extract market ID from URL or use a default method
         const marketId = parseInt(window.location.pathname.split('/').pop() || '1');
         
-        // Fetch complete market data from Sanity
-        const sanityMarket = await sanityService.getMarketById(marketId);
-        
-        if (sanityMarket) {
-          // Set description
-          setMarketDescription(sanityMarket.description);
-          
-          // Fetch landing image URL separately if needed
-          const imageUrl = await sanityService.getMarketLandingImageUrl(marketId);
-          setLandingImageUrl(imageUrl);
-        }
+        // Fetch landing image URL separately if needed
+        const imageUrl = await sanityService.getMarketLandingImageUrl(marketId);
+        setLandingImageUrl(imageUrl);
       } catch (error) {
         console.error('Failed to fetch market data from Sanity:', error);
       }
@@ -224,7 +215,7 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
         {/* Title and Status Badges */}
         <div className="space-y-2">
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            {market.titleString}
+            {market.titleString || 'Untitled Market'}
           </h1>
           <div className="flex flex-wrap gap-2">
             {renderStatusBadges()}
@@ -232,9 +223,9 @@ const MarketHeader: React.FC<MarketHeaderProps> = ({ market }) => {
         </div>
         
         {/* Market Description */}
-        {marketDescription && (
+        {market.description && (
           <div className="text-muted-foreground leading-relaxed max-w-2xl">
-            <p>{marketDescription}</p>
+            <p>{market.description}</p>
           </div>
         )}
 

@@ -9,6 +9,7 @@ import { MarketCalculations } from '../utils/market-calculations';
 import { getWithdrawTransactionCommandArray, sendTransaction } from '../utils/transaction';
 import { useWallet } from './WalletContext';
 import { getRpcUrl } from 'zkwasm-minirollup-browser';
+import sanityService from '../services/sanityService';
 
 interface GlobalState {
   counter: number;
@@ -628,11 +629,13 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
       console.log('Fetching market, player data and global state from API for market:', marketId);
       
       // Use market-specific API calls plus global state
-      const [marketResponse, playerResponse, globalStateResponse] = await Promise.all([
+      const [marketResponse, playerResponse, globalStateResponse, sanityResponse] = await Promise.all([
         api.getMarket(marketId),
         api.getPlayerMarketPosition(playerId[0], playerId[1], marketId),
-        api.queryMarketState()
+        api.queryMarketState(),
+        sanityService.getMarketById(parseInt(marketId || '1'))
       ]);
+
       console.log('Market response:', marketResponse);
       console.log('Player response:', playerResponse);
       console.log('Global state response:', globalStateResponse);
@@ -680,7 +683,8 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
         
         const parsedMarketData: MarketData = {
           marketId: marketFromResponse.marketId?.toString(),
-          titleString: marketFromResponse.titleString || "Untitled Market",
+          titleString: sanityResponse?.name || "Untitled Market",
+          description: sanityResponse?.description,
           yes_liquidity: marketFromResponse.totalYesShares?.toString() || marketFromResponse.yesLiquidity?.toString() || "0",
           no_liquidity: marketFromResponse.totalNoShares?.toString() || marketFromResponse.noLiquidity?.toString() || "0", 
           b: marketFromResponse.b?.toString() || "1000000", // Default b = 1,000,000
