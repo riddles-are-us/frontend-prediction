@@ -81,7 +81,9 @@ const MarketList = () => {
           noLiquidity: backendMarket.totalNoShares?.toString() || backendMarket.noLiquidity || "0",
           b: backendMarket.b?.toString() || "1000000", // Default b = 1,000,000
           landingUrl: sanityMarket?.landingUrl,
-          sanityData: sanityMarket
+          sanityData: sanityMarket,
+          titleString: sanityMarket?.name,
+          description: sanityMarket?.description,
         };
       });
       
