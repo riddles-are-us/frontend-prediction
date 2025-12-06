@@ -237,7 +237,7 @@ export const MarketProvider: React.FC<MarketProviderProps> = ({ children }) => {
     // };
 
     const config = {
-      serverUrl: "http://172.23.84.199:3000", // Use the same server URL
+      serverUrl: import.meta.env.REACT_APP_URL, // Use the same server URL
       // privkey: "00000000" // Dummy private key for read-only operations
       privkey: l2Account.getPrivateKey(),
     };
